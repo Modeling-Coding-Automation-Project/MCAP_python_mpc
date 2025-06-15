@@ -1,12 +1,23 @@
 """
 File: linear_mpc.py
 
-This module implements Linear Model Predictive Control (MPC) algorithms for discrete-time linear time-invariant (LTI) systems, with and without constraints. It provides classes for unconstrained MPC (LTI_MPC_NoConstraints) and constrained MPC (LTI_MPC), supporting state estimation via a Kalman filter, reference trajectory tracking, and quadratic programming-based constraint handling.
+This module implements Linear Model Predictive Control (MPC) algorithms
+for discrete-time linear time-invariant (LTI) systems,
+with and without constraints.
+It provides classes for unconstrained MPC (LTI_MPC_NoConstraints)
+and constrained MPC (LTI_MPC),
+supporting state estimation via a Kalman filter,
+reference trajectory tracking,
+and quadratic programming-based constraint handling.
 """
 import numpy as np
 
-from mpc_utility.state_space_utility import *
-from mpc_utility.linear_solver_utility import *
+from mpc_utility.state_space_utility import SymbolicStateSpace
+from mpc_utility.state_space_utility import StateSpaceEmbeddedIntegrator
+from mpc_utility.state_space_utility import MPC_PredictionMatrices
+from mpc_utility.state_space_utility import MPC_ReferenceTrajectory
+from mpc_utility.linear_solver_utility import LTI_MPC_QP_Solver
+from mpc_utility.linear_solver_utility import symbolic_to_numeric_matrix
 from external_libraries.MCAP_python_control.python_control.kalman_filter import LinearKalmanFilter
 from external_libraries.MCAP_python_control.python_control.kalman_filter import DelayedVectorObject
 
@@ -25,9 +36,6 @@ class LTI_MPC_NoConstraints:
         # Check compatibility
         if state_space.delta_time <= 0.0:
             raise ValueError("State space model must be discrete-time.")
-        if not isinstance(state_space, SymbolicStateSpace):
-            raise ValueError(
-                "State space model must be of type SymbolicStateSpace.")
 
         self.Number_of_Delay = state_space.Number_of_Delay
 
