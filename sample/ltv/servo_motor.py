@@ -26,6 +26,8 @@ from python_mpc.linear_mpc import LTV_MPC_NoConstraints
 from sample.simulation_manager.visualize.simulation_plotter import SimulationPlotter
 from sample.simulation_manager.signal_edit.sampler import PulseGenerator
 
+from mpc_utility.state_space_utility_deploy import StateSpaceUpdaterDeploy, ABCD_UPDATER_CLASS_NAME
+
 
 class ServoMotorParameters:
     Lshaft = 1.0
@@ -129,6 +131,12 @@ def main():
 
     ideal_plant_model = SymbolicStateSpace(
         sym_Ad, sym_Bd, sym_Cd, delta_time=dt, Number_of_Delay=Number_of_Delay)
+
+    code_text = StateSpaceUpdaterDeploy.create_ABCD_update_code(
+        A=sym_Ad, B=sym_Bd, C=sym_Cd, class_name=ABCD_UPDATER_CLASS_NAME)
+
+    with open("servo_motor_plant_updater.py", "w") as f:
+        f.write(code_text)
 
     Weight_U = np.diag([0.001])
     Weight_Y = np.diag([1.0, 0.005])
