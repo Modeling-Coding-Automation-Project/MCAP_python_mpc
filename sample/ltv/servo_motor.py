@@ -132,7 +132,10 @@ def main():
     ideal_plant_model = SymbolicStateSpace(
         sym_Ad, sym_Bd, sym_Cd, delta_time=dt, Number_of_Delay=Number_of_Delay)
 
+    parameters = ServoMotorParameters()
+
     StateSpaceUpdaterDeploy.create_write_ABCD_update_code(
+        argument_struct=parameters,
         A=sym_Ad, B=sym_Bd, C=sym_Cd, class_name=ABCD_UPDATER_CLASS_NAME,
         file_name="servo_motor_plant_updater.py")
 
@@ -142,9 +145,8 @@ def main():
     Np = 20
     Nc = 2
 
-    ltv_mpc = LTV_MPC_NoConstraints(
-        ideal_plant_model, Np=Np, Nc=Nc,
-        Weight_U=Weight_U, Weight_Y=Weight_Y)
+    ltv_mpc = LTV_MPC_NoConstraints(ideal_plant_model, Np=Np, Nc=Nc,
+                                    Weight_U=Weight_U, Weight_Y=Weight_Y)
 
     # # %% simulation
     # t_sim = 20.0
