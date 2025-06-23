@@ -1,17 +1,10 @@
 """
-File: servo_motor_constraints.py
+File: servo_motor.py
 
-This script demonstrates the setup,
-simulation, and deployment of a constrained
-Linear Time-Variant Model Predictive Controller (LTV-MPC)
-for a servo motor system.
-The code constructs a discrete-time state-space model of the plant,
-defines MPC weights and constraints,
-generates deployable C++ code for the controller,
-and simulates the closed-loop response of the system under the designed MPC.
-The simulation results,
-including reference tracking, control input,
-and state trajectories, are visualized using a plotting utility.
+This script demonstrates Model Predictive Control (MPC) for a DC servo motor system without constraints.
+It models the servo motor as a linear time-invariant (LTI) system, discretizes the plant, sets up an MPC controller,
+and simulates the closed-loop response to a pulse reference input.
+The simulation results are visualized using a plotting utility.
 
 References:
 A. Bemporad and E. Mosca, "Fulfilling hard constraints in uncertain linear systems
@@ -28,7 +21,7 @@ import sympy as sp
 import control
 
 from mpc_utility.state_space_utility import SymbolicStateSpace
-from python_mpc.linear_mpc import LTI_MPC
+from python_mpc.linear_mpc import LTV_MPC_NoConstraints
 
 from sample.simulation_manager.visualize.simulation_plotter import SimulationPlotter
 from sample.simulation_manager.signal_edit.sampler import PulseGenerator
@@ -141,18 +134,9 @@ def main():
     Np = 20
     Nc = 2
 
-    delta_U_min = np.array([[-100.0]])
-    delta_U_max = np.array([[100.0]])
-    U_min = np.array([[-180.0]])
-    U_max = np.array([[180.0]])
-    Y_min = np.array([[-10.0], [-100.0]])
-    Y_max = np.array([[10.0], [100.0]])
-
-    # lti_mpc = LTI_MPC(ideal_plant_model, Np=Np, Nc=Nc,
-    #                   Weight_U=Weight_U, Weight_Y=Weight_Y,
-    #                   delta_U_min=delta_U_min, delta_U_max=delta_U_max,
-    #                   U_min=U_min, U_max=U_max,
-    #                   Y_min=Y_min, Y_max=Y_max)
+    ltv_mpc = LTV_MPC_NoConstraints(
+        ideal_plant_model, Np=Np, Nc=Nc,
+        Weight_U=Weight_U, Weight_Y=Weight_Y)
 
     # # %% simulation
     # t_sim = 20.0
@@ -206,13 +190,8 @@ def main():
     #     U = lti_mpc.update(ref, y_measured)
 
     #     plotter.append_name(ref, "ref")
-
     #     plotter.append_name(U, "U")
-    #     plotter.append_name(U_min, "U_min")
-    #     plotter.append_name(U_max, "U_max")
-
     #     plotter.append_name(y_measured, "y_measured")
-
     #     plotter.append_name(X, "X")
 
     # plotter.assign("ref", position=(0, 0), column=0, row=0, x_sequence=time)
@@ -227,9 +206,7 @@ def main():
     # plotter.assign("X", position=(1, 1), column=2, row=0, x_sequence=time)
     # plotter.assign("X", position=(2, 1), column=3, row=0, x_sequence=time)
 
-    # plotter.assign("U", position=(2, 0), x_sequence=time)
-    # plotter.assign("U_min", position=(2, 0), x_sequence=time, line_style='--')
-    # plotter.assign("U_max", position=(2, 0), x_sequence=time, line_style='--')
+    # plotter.assign_all("U", position=(2, 0), x_sequence=time)
 
     # plotter.plot("Servo Motor plant, MPC Response")
 

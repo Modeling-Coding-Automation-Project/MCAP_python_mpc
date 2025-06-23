@@ -315,3 +315,32 @@ class LTI_MPC(LTI_MPC_NoConstraints):
             X_augmented=X_augmented)
 
         return delta_U
+
+
+class LTV_MPC_NoConstraints(LTI_MPC_NoConstraints):
+    def __init__(self, state_space: SymbolicStateSpace, Np: int, Nc: int,
+                 Weight_U: np.ndarray, Weight_Y: np.ndarray,
+                 Q_kf: np.ndarray = None, R_kf: np.ndarray = None,
+                 is_ref_trajectory: bool = False):
+
+        super().__init__(state_space, Np, Nc, Weight_U, Weight_Y,
+                         Q_kf, R_kf, is_ref_trajectory)
+
+    def create_prediction_matrices(self, Weight_Y: np.ndarray) -> MPC_PredictionMatrices:
+
+        prediction_matrices = MPC_PredictionMatrices(
+            Np=self.Np,
+            Nc=self.Nc,
+            INPUT_SIZE=self.AUGMENTED_INPUT_SIZE,
+            STATE_SIZE=self.AUGMENTED_STATE_SIZE,
+            OUTPUT_SIZE=self.AUGMENTED_OUTPUT_SIZE)
+
+        if (0 == len(self.augmented_ss.A.free_symbols)) and \
+                (0 == len(self.augmented_ss.B.free_symbols)) and \
+                (0 == len(self.augmented_ss.C.free_symbols)):
+            raise ValueError("State space model must be symbolic.")
+
+        prediction_matrices.substitute_symbolic(
+            self.augmented_ss.A, self.augmented_ss.B, Weight_Y * self.augmented_ss.C)
+
+        return prediction_matrices

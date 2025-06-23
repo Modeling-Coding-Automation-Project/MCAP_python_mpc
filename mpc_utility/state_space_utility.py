@@ -30,6 +30,45 @@ def symbolic_to_numeric_matrix(symbolic_matrix: sp.Matrix) -> np.ndarray:
     return numeric_matrix
 
 
+class NumericStateSpace:
+    """
+    A class representing a numeric state-space model.
+    Attributes:
+        A (np.ndarray): State matrix.
+        B (np.ndarray): Input matrix.
+        C (np.ndarray): Output matrix.
+        D (np.ndarray, optional): Feedthrough matrix.
+        delta_time (float): Time step for discrete systems.
+        Number_of_Delay (int): Number of delays in the system.
+    """
+
+    def __init__(self, A: np.ndarray, B: np.ndarray, C: np.ndarray,
+                 D: np.ndarray = None, delta_time=0.0, Number_of_Delay=0):
+        self.delta_time = delta_time
+        self.STATE_SIZE = A.shape[0]
+        self.INPUT_SIZE = B.shape[1]
+        self.OUTPUT_SIZE = C.shape[0]
+
+        if not isinstance(A, np.ndarray):
+            raise ValueError("A must be of type numpy ndarray.")
+        self.A = A
+
+        if not isinstance(B, np.ndarray):
+            raise ValueError("B must be of type numpy ndarray.")
+        self.B = B
+
+        if not isinstance(C, np.ndarray):
+            raise ValueError("C must be of type numpy ndarray.")
+        self.C = C
+
+        if D is not None:
+            if not isinstance(D, np.ndarray):
+                raise ValueError("D must be of type numpy ndarray.")
+            self.D = D
+
+        self.Number_of_Delay = Number_of_Delay
+
+
 class SymbolicStateSpace:
     """
     A class representing a symbolic state-space model.
@@ -49,26 +88,22 @@ class SymbolicStateSpace:
         self.INPUT_SIZE = B.shape[1]
         self.OUTPUT_SIZE = C.shape[0]
 
-        if not isinstance(A, sp.Matrix):
-            self.A = sp.Matrix(A)
-        else:
-            self.A = A
+        if not isinstance(A, sp.MatrixBase):
+            raise ValueError("A must be of type sympy matrix.")
+        self.A = A
 
-        if not isinstance(B, sp.Matrix):
-            self.B = sp.Matrix(B)
-        else:
-            self.B = B
+        if not isinstance(B, sp.MatrixBase):
+            raise ValueError("B must be of type sympy matrix.")
+        self.B = B
 
-        if not isinstance(C, sp.Matrix):
-            self.C = sp.Matrix(C)
-        else:
-            self.C = C
+        if not isinstance(C, sp.MatrixBase):
+            raise ValueError("C must be of type sympy matrix.")
+        self.C = C
 
         if D is not None:
-            if not isinstance(D, sp.Matrix):
-                self.D = sp.Matrix(D)
-            else:
-                self.D = D
+            if not isinstance(D, sp.MatrixBase):
+                raise ValueError("D must be of type sympy matrix.")
+            self.D = D
 
         self.Number_of_Delay = Number_of_Delay
 
