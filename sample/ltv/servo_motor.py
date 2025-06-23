@@ -48,6 +48,8 @@ class ServoMotorParameters:
 
 
 def create_plant_model_ABCD():
+    PI = math.pi
+
     Lshaft = sp.Symbol('Lshaft', real=True)
     dshaft = sp.Symbol('dshaft', real=True)
     shaftrho = sp.Symbol('shaftrho', real=True)
@@ -65,9 +67,9 @@ def create_plant_model_ABCD():
     Jload = 50.0 * Jmotor
     Bload = sp.Symbol('Bload', real=True)
 
-    Ip = sp.pi / 32.0 * dshaft ** 4
+    Ip = PI / 32.0 * dshaft ** 4
     Kth = G * Ip / Lshaft
-    Vshaft = sp.pi * (dshaft ** 2) / 4.0 * Lshaft
+    Vshaft = PI * (dshaft ** 2) / 4.0 * Lshaft
     Mshaft = shaftrho * Vshaft
     Jshaft = Mshaft * 0.5 * (dshaft ** 2 / 4.0)
 
