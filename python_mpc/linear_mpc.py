@@ -317,14 +317,21 @@ class LTI_MPC(LTI_MPC_NoConstraints):
         return delta_U
 
 
-class LTV_MPC_NoConstraints(LTI_MPC_NoConstraints):
+class LTV_MPC_NoConstraints:
     def __init__(self, state_space: SymbolicStateSpace, Np: int, Nc: int,
                  Weight_U: np.ndarray, Weight_Y: np.ndarray,
                  Q_kf: np.ndarray = None, R_kf: np.ndarray = None,
                  is_ref_trajectory: bool = False):
 
-        super().__init__(state_space, Np, Nc, Weight_U, Weight_Y,
-                         Q_kf, R_kf, is_ref_trajectory)
+        # Check compatibility
+        if state_space.delta_time <= 0.0:
+            raise ValueError("State space model must be discrete-time.")
+
+        self.Number_of_Delay = state_space.Number_of_Delay
+
+        if (Np < self.Number_of_Delay):
+            raise ValueError(
+                "Prediction horizon Np must be greater than the number of delays.")
 
     def create_prediction_matrices(self, Weight_Y: np.ndarray) -> MPC_PredictionMatrices:
 
