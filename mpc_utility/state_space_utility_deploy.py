@@ -21,6 +21,16 @@ D_UPDATER_FUNCTION_NAME = "update_D"
 
 class StateSpaceUpdaterDeploy:
     @staticmethod
+    def create_Matrix_update_code(sym_object: sp.Matrix, function_name: str):
+        code_text, _ = ExpressionDeploy.create_sympy_code(
+            sym_object)
+
+        code_text = code_text.replace(
+            "def sympy_function(", "def " + function_name + "(")
+
+        return code_text
+
+    @staticmethod
     def create_ABCD_update_code(
             A: sp.Matrix = None,
             B: sp.Matrix = None,
@@ -69,11 +79,16 @@ class StateSpaceUpdaterDeploy:
         return code_text
 
     @staticmethod
-    def create_Matrix_update_code(sym_object: sp.Matrix, function_name: str):
-        code_text, _ = ExpressionDeploy.create_sympy_code(
-            sym_object)
+    def create_write_ABCD_update_code(
+            A: sp.Matrix = None,
+            B: sp.Matrix = None,
+            C: sp.Matrix = None,
+            D: sp.Matrix = None,
+            class_name: str = ABCD_UPDATER_CLASS_NAME,
+            file_name: str = MPC_STATE_SPACE_UPDATER_FILE_NAME):
 
-        code_text = code_text.replace(
-            "def sympy_function(", "def " + function_name + "(")
+        code_text = StateSpaceUpdaterDeploy.create_ABCD_update_code(
+            A=A, B=B, C=C, D=D, class_name=class_name)
 
-        return code_text
+        with open(file_name, "w", encoding="utf-8") as f:
+            f.write(code_text)

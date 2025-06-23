@@ -132,11 +132,9 @@ def main():
     ideal_plant_model = SymbolicStateSpace(
         sym_Ad, sym_Bd, sym_Cd, delta_time=dt, Number_of_Delay=Number_of_Delay)
 
-    code_text = StateSpaceUpdaterDeploy.create_ABCD_update_code(
-        A=sym_Ad, B=sym_Bd, C=sym_Cd, class_name=ABCD_UPDATER_CLASS_NAME)
-
-    with open("servo_motor_plant_updater.py", "w") as f:
-        f.write(code_text)
+    StateSpaceUpdaterDeploy.create_write_ABCD_update_code(
+        A=sym_Ad, B=sym_Bd, C=sym_Cd, class_name=ABCD_UPDATER_CLASS_NAME,
+        file_name="servo_motor_plant_updater.py")
 
     Weight_U = np.diag([0.001])
     Weight_Y = np.diag([1.0, 0.005])
