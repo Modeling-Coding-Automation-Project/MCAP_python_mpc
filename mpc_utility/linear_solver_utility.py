@@ -1,7 +1,12 @@
 """
 File: linear_solver_utility.py
 
-This module provides the DU_U_Y_Limits class, which is a utility for managing and validating constraints on control increments (delta_U), control variables (U), and output variables (Y) in the context of Model Predictive Control (MPC) or similar optimization problems. The class supports initialization, validation, and dynamic management of lower and upper bounds for these variables, as well as tracking which constraints are active or inactive.
+This module provides the DU_U_Y_Limits class,
+which is a utility for managing and validating constraints on control increments (delta_U),
+control variables (U), and output variables (Y) in the context of Model Predictive Control (MPC)
+or similar optimization problems. The class supports initialization,
+validation, and dynamic management of lower and upper bounds for these variables,
+as well as tracking which constraints are active or inactive.
 """
 import numpy as np
 import sympy as sp

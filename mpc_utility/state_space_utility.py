@@ -1,7 +1,12 @@
 """
 File: state_space_utility.py
 
-This module provides utility classes and functions for symbolic and numeric manipulation of state-space models, particularly for Model Predictive Control (MPC) applications. It leverages sympy for symbolic computation and numpy for numerical operations, enabling the construction, augmentation, and conversion of state-space representations, as well as the generation of prediction matrices for MPC.
+This module provides utility classes and functions for symbolic
+and numeric manipulation of state-space models,
+particularly for Model Predictive Control (MPC) applications.
+It leverages sympy for symbolic computation and numpy for numerical operations,
+enabling the construction, augmentation, and conversion of state-space representations,
+as well as the generation of prediction matrices for MPC.
 """
 import numpy as np
 import sympy as sp
