@@ -199,18 +199,21 @@ class LTV_MPC_StateSpaceInitializer:
 
     def get_initial_ABCD(self, parameters_struct,
                          A: sp.Matrix = None, B: sp.Matrix = None,
-                         C: sp.Matrix = None, D: sp.Matrix = None):
+                         C: sp.Matrix = None, D: sp.Matrix = None,
+                         file_name: str = MPC_STATE_SPACE_UPDATER_FILE_NAME):
         StateSpaceUpdaterDeploy.create_write_ABCD_update_code(
             argument_struct=parameters_struct,
             A=A, B=B, C=C, class_name=ABCD_UPDATER_CLASS_NAME,
-            file_name=MPC_STATE_SPACE_UPDATER_FILE_NAME)
+            file_name=file_name)
 
         self.ABCD_sympy_function_generated = True
 
         local_vars = {"parameters_struct": parameters_struct}
 
+        file_name_no_extension = os.path.splitext(file_name)[0]
+
         exe_code = (
-            "from mpc_state_space_updater import ABCD_Updater\n"
+            f"from {file_name_no_extension} import ABCD_Updater\n"
             "A_numeric, B_numeric, C_numeric, D_numeric = ABCD_Updater.update(parameters_struct)\n"
         )
 
