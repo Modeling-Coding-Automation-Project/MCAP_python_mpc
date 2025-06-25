@@ -16,6 +16,7 @@ from mpc_utility.state_space_utility import SymbolicStateSpace
 from mpc_utility.state_space_utility import StateSpaceEmbeddedIntegrator
 from mpc_utility.state_space_utility import MPC_PredictionMatrices
 from mpc_utility.state_space_utility import MPC_ReferenceTrajectory
+from mpc_utility.state_space_utility_deploy import LTV_MPC_StateSpaceInitializer
 from mpc_utility.linear_solver_utility import LTI_MPC_QP_Solver
 from mpc_utility.linear_solver_utility import symbolic_to_numeric_matrix
 from external_libraries.MCAP_python_control.python_control.kalman_filter import LinearKalmanFilter
@@ -318,7 +319,9 @@ class LTI_MPC(LTI_MPC_NoConstraints):
 
 
 class LTV_MPC_NoConstraints:
-    def __init__(self, state_space: SymbolicStateSpace, Np: int, Nc: int,
+    def __init__(self, state_space: SymbolicStateSpace,
+                 parameters_struct,
+                 Np: int, Nc: int,
                  Weight_U: np.ndarray, Weight_Y: np.ndarray,
                  Q_kf: np.ndarray = None, R_kf: np.ndarray = None,
                  is_ref_trajectory: bool = False):
@@ -332,6 +335,35 @@ class LTV_MPC_NoConstraints:
         if (Np < self.Number_of_Delay):
             raise ValueError(
                 "Prediction horizon Np must be greater than the number of delays.")
+
+        self.parameters_struct = parameters_struct
+
+        self.state_space_initializer = LTV_MPC_StateSpaceInitializer()
+
+        self.kalman_filter = self.initialize_kalman_filter(
+            state_space, self.parameters_struct, Q_kf, R_kf)
+
+    def initialize_kalman_filter(self, state_space: SymbolicStateSpace,
+                                 parameters_struct,
+                                 Q_kf: np.ndarray, R_kf: np.ndarray) -> LinearKalmanFilter:
+        if Q_kf is None:
+            Q_kf = np.eye(state_space.A.shape[0])
+        if R_kf is None:
+            R_kf = np.eye(state_space.C.shape[0])
+
+        A, B, C, _ = self.state_space_initializer.get_initial_ABCD(
+            parameters_struct, state_space.A, state_space.B, state_space.C)
+
+        lkf = LinearKalmanFilter(
+            A=A,
+            B=B,
+            C=C,
+            Q=Q_kf, R=R_kf,
+            Number_of_Delay=state_space.Number_of_Delay)
+
+        lkf.converge_G()
+
+        return lkf
 
     def create_prediction_matrices(self, Weight_Y: np.ndarray) -> MPC_PredictionMatrices:
 

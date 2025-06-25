@@ -35,8 +35,6 @@ class ServoMotorParameters:
     shaftrho = 7850.0
     G = 81500.0 * 1.0e6
 
-    tauam = 50.0 * 1.0e6
-
     Mmotor = 100.0
     Rmotor = 0.1
 
@@ -134,18 +132,15 @@ def main():
 
     parameters = ServoMotorParameters()
 
-    StateSpaceUpdaterDeploy.create_write_ABCD_update_code(
-        argument_struct=parameters,
-        A=sym_Ad, B=sym_Bd, C=sym_Cd, class_name=ABCD_UPDATER_CLASS_NAME,
-        file_name="servo_motor_plant_updater.py")
-
     Weight_U = np.diag([0.001])
     Weight_Y = np.diag([1.0, 0.005])
 
     Np = 20
     Nc = 2
 
-    ltv_mpc = LTV_MPC_NoConstraints(ideal_plant_model, Np=Np, Nc=Nc,
+    ltv_mpc = LTV_MPC_NoConstraints(state_space=ideal_plant_model,
+                                    parameters_struct=parameters,
+                                    Np=Np, Nc=Nc,
                                     Weight_U=Weight_U, Weight_Y=Weight_Y)
 
     # # %% simulation

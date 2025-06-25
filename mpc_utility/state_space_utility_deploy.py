@@ -29,10 +29,10 @@ SYMPY_FUNCTION_NAME = "sympy_function"
 class StateSpaceUpdaterDeploy:
     @staticmethod
     def create_Matrix_update_code(sym_object: sp.Matrix, function_name: str) -> str:
-        code_text, _ = ExpressionDeploy.create_sympy_code(
+        code_text, arguments_text = ExpressionDeploy.create_sympy_code(
             sym_object)
 
-        return code_text
+        return code_text, arguments_text
 
     @staticmethod
     def write_param_names_argument(param_names: list) -> str:
@@ -45,14 +45,11 @@ class StateSpaceUpdaterDeploy:
         return code_text
 
     @staticmethod
-    def write_update_return_code(class_name: str, param_names: list) -> str:
+    def write_update_return_code(class_name: str, arguments_text: str) -> str:
         code_text = "return " + class_name + "." + \
             SYMPY_FUNCTION_NAME + "("
 
-        for i, param_name in enumerate(param_names):
-            code_text += f"{param_name}={param_name}"
-            if i < len(param_names) - 1:
-                code_text += ", "
+        code_text += arguments_text
 
         code_text += ")"
 
@@ -63,6 +60,10 @@ class StateSpaceUpdaterDeploy:
                                 function_name: str,
                                 sym_object: sp.Matrix,
                                 param_names: list) -> str:
+
+        function_code, arguments_text = \
+            StateSpaceUpdaterDeploy.create_Matrix_update_code(
+                sym_object, function_name)
 
         code_text = ""
 
@@ -75,11 +76,9 @@ class StateSpaceUpdaterDeploy:
         code_text += "):\n"
 
         code_text += "        " + StateSpaceUpdaterDeploy.write_update_return_code(
-            updater_class_name, param_names) + "\n\n"
+            updater_class_name, arguments_text) + "\n\n"
 
         code_text += "    @staticmethod\n    "
-        function_code = StateSpaceUpdaterDeploy.create_Matrix_update_code(
-            sym_object, function_name)
         function_code = function_code.replace("\n", "\n    ")
         code_text += function_code
         code_text += "\n\n"
@@ -191,3 +190,35 @@ class StateSpaceUpdaterDeploy:
 
         with open(file_name, "w", encoding="utf-8") as f:
             f.write(code_text)
+
+
+class LTV_MPC_StateSpaceInitializer:
+    def __init__(self):
+        self.ABCD_sympy_function_generated = False
+        self.Phi_F_sympy_function_generated = False
+
+    def get_initial_ABCD(self, parameters_struct,
+                         A: sp.Matrix = None, B: sp.Matrix = None,
+                         C: sp.Matrix = None, D: sp.Matrix = None):
+        StateSpaceUpdaterDeploy.create_write_ABCD_update_code(
+            argument_struct=parameters_struct,
+            A=A, B=B, C=C, class_name=ABCD_UPDATER_CLASS_NAME,
+            file_name=MPC_STATE_SPACE_UPDATER_FILE_NAME)
+
+        self.ABCD_sympy_function_generated = True
+
+        local_vars = {"parameters_struct": parameters_struct}
+
+        exe_code = (
+            "from mpc_state_space_updater import ABCD_Updater\n"
+            "A_numeric, B_numeric, C_numeric, D_numeric = ABCD_Updater.update(parameters_struct)\n"
+        )
+
+        exec(exe_code, globals(), local_vars)
+
+        A_numeric = local_vars["A_numeric"]
+        B_numeric = local_vars["B_numeric"]
+        C_numeric = local_vars["C_numeric"]
+        D_numeric = local_vars["D_numeric"]
+
+        return A_numeric, B_numeric, C_numeric, D_numeric
