@@ -246,19 +246,19 @@ class LTV_MPC_StateSpaceInitializer:
         with open(file_name, "a", encoding="utf-8") as f:
             f.write(code_text)
 
-        self.Phi_F_sympy_function_generated = True
+        # self.Phi_F_sympy_function_generated = True
 
-        local_vars = {"parameters_struct": parameters_struct}
+        # local_vars = {"parameters_struct": parameters_struct}
 
-        file_name_no_extension = os.path.splitext(file_name)[0]
+        # file_name_no_extension = os.path.splitext(file_name)[0]
 
-        exe_code = (
-            f"from {file_name_no_extension} import Phi_Updater\n"
-            "Phi_numeric = Phi_Updater.update(parameters_struct)\n"
-        )
+        # exe_code = (
+        #     f"from {file_name_no_extension} import Phi_Updater\n"
+        #     "Phi_numeric = Phi_Updater.update(parameters_struct)\n"
+        # )
 
-        exec(exe_code, globals(), local_vars)
+        # exec(exe_code, globals(), local_vars)
 
-        Phi_numeric = local_vars["Phi_numeric"]
+        # Phi_numeric = local_vars["Phi_numeric"]
 
-        return Phi_numeric, F
+        return np.array[[0, 0], [0, 0]], np.array[[0], [0]]
