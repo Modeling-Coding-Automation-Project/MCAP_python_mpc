@@ -203,7 +203,7 @@ class LTV_MPC_StateSpaceInitializer:
                          file_name: str = MPC_STATE_SPACE_UPDATER_FILE_NAME):
         StateSpaceUpdaterDeploy.create_write_ABCD_update_code(
             argument_struct=parameters_struct,
-            A=A, B=B, C=C, class_name=ABCD_UPDATER_CLASS_NAME,
+            A=A, B=B, C=C, D=D, class_name=ABCD_UPDATER_CLASS_NAME,
             file_name=file_name)
 
         self.ABCD_sympy_function_generated = True
@@ -225,3 +225,40 @@ class LTV_MPC_StateSpaceInitializer:
         D_numeric = local_vars["D_numeric"]
 
         return A_numeric, B_numeric, C_numeric, D_numeric
+
+    def get_initial_Phi_F(self, parameters_struct,
+                          Phi: sp.Matrix = None, F: sp.Matrix = None,
+                          file_name: str = MPC_STATE_SPACE_UPDATER_FILE_NAME):
+        if Phi is None:
+            raise ValueError("Phi matrices must be provided.")
+        if F is None:
+            raise ValueError("F matrices must be provided.")
+
+        code_text, arguments_text = ExpressionDeploy.create_sympy_code(Phi)
+
+        code_text += "\n\n"
+        code_text += "class Phi_Updater:\n\n"
+        code_text += "    @staticmethod\n"
+        code_text += "    def update(" + StateSpaceUpdaterDeploy.write_param_names_argument(
+            [k for k in vars(type(parameters_struct)) if not k.startswith('__')]) + "):\n"
+        code_text += "        return " + code_text
+
+        with open(file_name, "a", encoding="utf-8") as f:
+            f.write(code_text)
+
+        self.Phi_F_sympy_function_generated = True
+
+        local_vars = {"parameters_struct": parameters_struct}
+
+        file_name_no_extension = os.path.splitext(file_name)[0]
+
+        exe_code = (
+            f"from {file_name_no_extension} import Phi_Updater\n"
+            "Phi_numeric = Phi_Updater.update(parameters_struct)\n"
+        )
+
+        exec(exe_code, globals(), local_vars)
+
+        Phi_numeric = local_vars["Phi_numeric"]
+
+        return Phi_numeric, F

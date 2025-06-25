@@ -90,13 +90,13 @@ class StateSpaceEmbeddedIntegrator:
     """
 
     def __init__(self, state_space: SymbolicStateSpace):
-        if not isinstance(state_space.A, sp.Matrix):
+        if not isinstance(state_space.A, sp.MatrixBase):
             raise ValueError(
                 "A must be of type sympy matrix.")
-        if not isinstance(state_space.B, sp.Matrix):
+        if not isinstance(state_space.B, sp.MatrixBase):
             raise ValueError(
                 "B must be of type sympy matrix.")
-        if not isinstance(state_space.C, sp.Matrix):
+        if not isinstance(state_space.C, sp.MatrixBase):
             raise ValueError(
                 "C must be of type sympy matrix.")
 
@@ -261,6 +261,19 @@ class MPC_PredictionMatrices:
                 self.C_symbolic[i, j].subs(f'c{i+1}{j+1}', C[i, j])
 
         self._generate_exponential_A_list(self.A_symbolic)
+
+    def substitute_symbolic(self, A: sp.Matrix, B: sp.Matrix, C: sp.Matrix):
+
+        if not isinstance(A, sp.MatrixBase):
+            raise ValueError("A must be a sympy matrix.")
+        if not isinstance(B, sp.MatrixBase):
+            raise ValueError("B must be a sympy matrix.")
+        if not isinstance(C, sp.MatrixBase):
+            raise ValueError("C must be a sympy matrix.")
+
+        self.substitute_ABC_symbolic(A, B, C)
+
+        self.build_matrices(self.B_symbolic, self.C_symbolic)
 
     def substitute_ABC_numeric(self, A: np.ndarray, B: np.ndarray, C: np.ndarray):
         """

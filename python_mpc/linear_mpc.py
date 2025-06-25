@@ -11,6 +11,7 @@ reference trajectory tracking,
 and quadratic programming-based constraint handling.
 """
 import numpy as np
+import sympy as sp
 
 from mpc_utility.state_space_utility import SymbolicStateSpace
 from mpc_utility.state_space_utility import StateSpaceEmbeddedIntegrator
@@ -343,6 +344,44 @@ class LTV_MPC_NoConstraints:
         self.kalman_filter = self.initialize_kalman_filter(
             state_space, self.parameters_struct, Q_kf, R_kf)
 
+        self.augmented_ss = StateSpaceEmbeddedIntegrator(state_space)
+
+        self.AUGMENTED_STATE_SIZE = self.augmented_ss.A.shape[0]
+
+        self.AUGMENTED_INPUT_SIZE = self.augmented_ss.B.shape[1]
+        if self.AUGMENTED_INPUT_SIZE != state_space.B.shape[1]:
+            raise ValueError(
+                "the augmented state space input must have the same size of state_space.B.")
+        self.AUGMENTED_OUTPUT_SIZE = self.augmented_ss.C.shape[0]
+        if self.AUGMENTED_OUTPUT_SIZE != state_space.C.shape[0]:
+            raise ValueError(
+                "the augmented state space output must have the same size of state_space.C.")
+
+        self.X_inner_model = np.zeros(
+            (state_space.A.shape[0], 1))
+        self.U_latest = np.zeros(
+            (self.AUGMENTED_INPUT_SIZE, 1))
+
+        if Nc > Np:
+            raise ValueError("Nc must be less than or equal to Np.")
+        self.Np = Np
+        self.Nc = Nc
+
+        self.Weight_U_Nc = self.update_weight(Weight_U)
+
+        self.prediction_matrices = self.create_prediction_matrices(Weight_Y)
+
+        # self.solver_factor = np.zeros(
+        #     (self.AUGMENTED_INPUT_SIZE * self.Nc,
+        #      self.AUGMENTED_OUTPUT_SIZE * self.Np))
+        # self.update_solver_factor(
+        #     self.prediction_matrices.Phi_numeric, self.Weight_U_Nc)
+
+        # self.Y_store = DelayedVectorObject(self.AUGMENTED_OUTPUT_SIZE,
+        #                                    self.Number_of_Delay)
+
+        # self.is_ref_trajectory = is_ref_trajectory
+
     def initialize_kalman_filter(self, state_space: SymbolicStateSpace,
                                  parameters_struct,
                                  Q_kf: np.ndarray, R_kf: np.ndarray) -> LinearKalmanFilter:
@@ -365,6 +404,10 @@ class LTV_MPC_NoConstraints:
 
         return lkf
 
+    def update_weight(self, Weight: np.ndarray):
+
+        return np.diag(np.tile(Weight, (self.Nc, 1)).flatten())
+
     def create_prediction_matrices(self, Weight_Y: np.ndarray) -> MPC_PredictionMatrices:
 
         prediction_matrices = MPC_PredictionMatrices(
@@ -380,6 +423,11 @@ class LTV_MPC_NoConstraints:
             raise ValueError("State space model must be symbolic.")
 
         prediction_matrices.substitute_symbolic(
-            self.augmented_ss.A, self.augmented_ss.B, Weight_Y * self.augmented_ss.C)
+            self.augmented_ss.A, self.augmented_ss.B, sp.Matrix(Weight_Y) * self.augmented_ss.C)
+
+        Phi_numeric, F_numeric = self.state_space_initializer.get_initial_Phi_F(
+            self.parameters_struct,
+            Phi=prediction_matrices.Phi_symbolic,
+            F=prediction_matrices.F_symbolic)
 
         return prediction_matrices
