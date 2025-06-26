@@ -10,6 +10,7 @@ as well as the generation of prediction matrices for MPC.
 """
 import numpy as np
 import sympy as sp
+import copy
 
 
 def symbolic_to_numeric_matrix(symbolic_matrix: sp.Matrix) -> np.ndarray:
@@ -181,7 +182,10 @@ class MPC_PredictionMatrices:
                 self.A_symbolic)
 
         self.F_symbolic = None
+        self.F_replacement = []
         self.Phi_symbolic = None
+        self.Phi_replacement = []
+
         self.F_numeric = None
         self.Phi_numeric = None
 
@@ -330,8 +334,8 @@ class MPC_PredictionMatrices:
             B (sp.Matrix): Input matrix.
             C (sp.Matrix): Output matrix.
         """
-        self.F_symbolic = self._build_F(C)
-        self.Phi_symbolic = self._build_Phi(B, C)
+        self.F_replacement, self.F_symbolic = self._build_F(C)
+        self.Phi_replacement, self.Phi_symbolic = self._build_Phi(B, C)
 
     def _generate_exponential_A_list(self, A: sp.Matrix):
 
@@ -343,56 +347,64 @@ class MPC_PredictionMatrices:
                 A_repl, A_red = sp.cse(A)
 
                 exponential_A_list.append(A_red[0])
-                exponential_A_replacement_list.append(A_repl)
+                if A_repl:
+                    exponential_A_replacement_list.append(A_repl)
             else:
                 A_repl, A_red = sp.cse(exponential_A_list[i - 1] * A)
 
                 exponential_A_list.append(A_red[0])
-                exponential_A_replacement_list.append(A_repl)
+                if A_repl:
+                    exponential_A_replacement_list.append(A_repl)
 
         return exponential_A_replacement_list, exponential_A_list
 
     def _build_F(self, C: sp.Matrix) -> sp.Matrix:
-        """
-        Builds the F matrix, which is used in the MPC prediction step.
-        Args:
-            C (sp.Matrix): Output matrix.
-        Returns:
-            sp.Matrix: The F matrix, which is a block matrix containing the outputs
-            of the system at each step in the prediction horizon.
-        """
-        F = sp.zeros(self.OUTPUT_SIZE * self.Np, self.STATE_SIZE)
+
+        F_expression = sp.zeros(self.OUTPUT_SIZE * self.Np, self.STATE_SIZE)
+        F_replacement = copy.deepcopy(self.exponential_A_replacement_list)
+
+        C_repl, C_red = sp.cse(C)
+        if C_repl:
+            F_replacement.append(C_repl)
+
         for i in range(self.Np):
             # C A^{i+1}
-            F[i * self.OUTPUT_SIZE:(i + 1) *
-              self.OUTPUT_SIZE, :] = C * self._exponential_A_list[i]
-        return F
+            F = C_red[0] * self._exponential_A_list[i]
+
+            F_expression[i * self.OUTPUT_SIZE:(i + 1) *
+                         self.OUTPUT_SIZE, :] = F
+
+        return F_replacement, F_expression
 
     def _build_Phi(self, B: sp.Matrix, C: sp.Matrix) -> sp.Matrix:
-        """
-        Builds the Phi matrix, which is used in the MPC control step.
-        Args:
-            B (sp.Matrix): Input matrix.
-            C (sp.Matrix): Output matrix.
-        Returns:
-            sp.Matrix: The Phi matrix, which is a block matrix containing the
-            contributions of the inputs to the outputs at each step in the prediction horizon.
-        """
-        Phi = sp.zeros(self.OUTPUT_SIZE * self.Np,
-                       self.INPUT_SIZE * self.Nc)
+
+        Phi_expression = sp.zeros(self.OUTPUT_SIZE * self.Np,
+                                  self.INPUT_SIZE * self.Nc)
+        Phi_replacement = copy.deepcopy(self.exponential_A_replacement_list)
+
+        C_repl, C_red = sp.cse(C)
+        if C_repl:
+            Phi_replacement.append(C_repl)
+
+        B_repl, B_red = sp.cse(B)
+        if B_repl:
+            Phi_replacement.append(B_repl)
 
         for i in range(self.Nc):
             for j in range(i, self.Np):
                 exponent = j - i
                 if exponent == 0:
-                    blok = C * B
+                    blok = C_red[0] * B_red[0]
                 else:
-                    blok = C * self._exponential_A_list[exponent - 1] * B
+                    blok = C_red[0] * \
+                        self._exponential_A_list[exponent - 1] * B_red[0]
 
                 r0, c0 = j * self.OUTPUT_SIZE, i * self.INPUT_SIZE
-                Phi[r0:r0 + self.OUTPUT_SIZE,
-                    c0:c0 + self.INPUT_SIZE] = blok
-        return Phi
+
+                Phi_expression[r0:r0 + self.OUTPUT_SIZE,
+                               c0:c0 + self.INPUT_SIZE] = blok
+
+        return Phi_replacement, Phi_expression
 
 
 class MPC_ReferenceTrajectory:
