@@ -235,35 +235,21 @@ class MPC_PredictionMatrices:
                 self.ABC_values[symbol] = C[i, j]
 
     def substitute_ABC_symbolic(self, A: sp.Matrix, B: sp.Matrix, C: sp.Matrix):
-        """
-        Substitutes symbolic variables in the state-space matrices A, B, and C
-        with their corresponding numeric values.
-        Args:
-            A (sp.Matrix): State matrix.
-            B (sp.Matrix): Input matrix.
-            C (sp.Matrix): Output matrix.
-        """
-        self.A_symbolic = sp.Matrix(self.STATE_SIZE, self.STATE_SIZE,
-                                    lambda i, j: sp.symbols(f'a{i+1}{j+1}'))
-        for i in range(A.shape[0]):
-            for j in range(A.shape[1]):
-                self.A_symbolic[i, j].subs(f'a{i+1}{j+1}', A[i, j])
 
-        self.B_symbolic = sp.Matrix(self.STATE_SIZE, self.INPUT_SIZE,
-                                    lambda i, j: sp.symbols(f'b{i+1}{j+1}'))
-        for i in range(B.shape[0]):
-            for j in range(B.shape[1]):
-                self.B_symbolic[i, j].subs(f'b{i+1}{j+1}', B[i, j])
+        if not isinstance(A, sp.MatrixBase):
+            raise ValueError("A must be a sympy matrix.")
+        if not isinstance(B, sp.MatrixBase):
+            raise ValueError("B must be a sympy matrix.")
+        if not isinstance(C, sp.MatrixBase):
+            raise ValueError("C must be a sympy matrix.")
 
-        self.C_symbolic = sp.Matrix(self.OUTPUT_SIZE, self.STATE_SIZE,
-                                    lambda i, j: sp.symbols(f'c{i+1}{j+1}'))
-        for i in range(C.shape[0]):
-            for j in range(C.shape[1]):
-                self.C_symbolic[i, j].subs(f'c{i+1}{j+1}', C[i, j])
+        self.A_symbolic = A
+        self.B_symbolic = B
+        self.C_symbolic = C
 
         self.exponential_A_replacement_list, \
             self._exponential_A_list = self._generate_exponential_A_list(
-                self.A_numeric)
+                self.A_symbolic)
 
     def substitute_symbolic(self, A: sp.Matrix, B: sp.Matrix, C: sp.Matrix):
 
