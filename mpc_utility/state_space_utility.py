@@ -176,8 +176,9 @@ class MPC_PredictionMatrices:
         self.C_numeric = None
         self.initialize_ABC()
 
-        self._exponential_A_list = self._generate_exponential_A_list(
-            self.A_symbolic)
+        self.exponential_A_replacement_list, \
+            self._exponential_A_list = self._generate_exponential_A_list(
+                self.A_symbolic)
 
         self.F_symbolic = None
         self.Phi_symbolic = None
@@ -260,7 +261,9 @@ class MPC_PredictionMatrices:
             for j in range(C.shape[1]):
                 self.C_symbolic[i, j].subs(f'c{i+1}{j+1}', C[i, j])
 
-        self._generate_exponential_A_list(self.A_symbolic)
+        self.exponential_A_replacement_list, \
+            self._exponential_A_list = self._generate_exponential_A_list(
+                self.A_numeric)
 
     def substitute_symbolic(self, A: sp.Matrix, B: sp.Matrix, C: sp.Matrix):
 
@@ -304,8 +307,9 @@ class MPC_PredictionMatrices:
                 self.C_numeric[i, j] = self.C_symbolic[i, j].subs(
                     self.ABC_values)
 
-        self._exponential_A_list = self._generate_exponential_A_list(
-            self.A_numeric)
+        self.exponential_A_replacement_list, \
+            self._exponential_A_list = self._generate_exponential_A_list(
+                self.A_numeric)
 
     def substitute_numeric(self, A: np.ndarray, B: np.ndarray, C: np.ndarray) -> tuple:
         """
@@ -344,24 +348,23 @@ class MPC_PredictionMatrices:
         self.Phi_symbolic = self._build_Phi(B, C)
 
     def _generate_exponential_A_list(self, A: sp.Matrix):
-        """
-        Generates a list of matrices representing the exponential of the state matrix A
-        for each step in the prediction horizon.
-        Args:
-            A (sp.Matrix): State matrix.
-        Returns:
-            list: A list of matrices representing the exponential of A for each step.
-        """
+
         exponential_A_list = []
+        exponential_A_replacement_list = []
 
         for i in range(self.Np):
             if i == 0:
-                exponential_A_list.append(A)
-            else:
-                exponential_A_list.append(
-                    exponential_A_list[i - 1] * A)
+                A_repl, A_red = sp.cse(A)
 
-        return exponential_A_list
+                exponential_A_list.append(A_red[0])
+                exponential_A_replacement_list.append(A_repl)
+            else:
+                A_repl, A_red = sp.cse(exponential_A_list[i - 1] * A)
+
+                exponential_A_list.append(A_red[0])
+                exponential_A_replacement_list.append(A_repl)
+
+        return exponential_A_replacement_list, exponential_A_list
 
     def _build_F(self, C: sp.Matrix) -> sp.Matrix:
         """
