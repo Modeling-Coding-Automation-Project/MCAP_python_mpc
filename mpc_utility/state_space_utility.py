@@ -337,12 +337,7 @@ class MPC_PredictionMatrices:
             self.Phi_symbolic)
 
     def build_matrices(self, B: sp.Matrix, C: sp.Matrix) -> tuple:
-        """
-        Builds the F and Phi matrices based on the symbolic state-space model.
-        Args:
-            B (sp.Matrix): Input matrix.
-            C (sp.Matrix): Output matrix.
-        """
+
         self.F_replacement, self.F_symbolic = self._build_F(C)
         self.Phi_replacement, self.Phi_symbolic = self._build_Phi(B, C)
 
