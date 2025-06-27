@@ -348,13 +348,13 @@ class MPC_PredictionMatrices:
 
                 exponential_A_list.append(A_red[0])
                 if A_repl:
-                    exponential_A_replacement_list.append(A_repl)
+                    exponential_A_replacement_list.append(A_repl[0])
             else:
                 A_repl, A_red = sp.cse(exponential_A_list[i - 1] * A)
 
                 exponential_A_list.append(A_red[0])
                 if A_repl:
-                    exponential_A_replacement_list.append(A_repl)
+                    exponential_A_replacement_list.append(A_repl[0])
 
         return exponential_A_replacement_list, exponential_A_list
 
@@ -365,7 +365,7 @@ class MPC_PredictionMatrices:
 
         C_repl, C_red = sp.cse(C)
         if C_repl:
-            F_replacement.append(C_repl)
+            F_replacement.append(C_repl[0])
 
         for i in range(self.Np):
             # C A^{i+1}
@@ -384,11 +384,11 @@ class MPC_PredictionMatrices:
 
         C_repl, C_red = sp.cse(C)
         if C_repl:
-            Phi_replacement.append(C_repl)
+            Phi_replacement.append(C_repl[0])
 
         B_repl, B_red = sp.cse(B)
         if B_repl:
-            Phi_replacement.append(B_repl)
+            Phi_replacement.append(B_repl[0])
 
         for i in range(self.Nc):
             for j in range(i, self.Np):

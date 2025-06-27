@@ -28,36 +28,68 @@ from sample.simulation_manager.signal_edit.sampler import PulseGenerator
 
 from mpc_utility.state_space_utility_deploy import StateSpaceUpdaterDeploy, ABCD_UPDATER_CLASS_NAME
 
+"""
+Lshaft = 1.0;                               % シャフト長さ
+dshaft = 0.02;                              % シャフト径
+shaftrho = 7850;                            % シャフトの密度 (炭素鋼)
+G = 81500 * 1e6;                            % 剛性率
+
+tauam = 50 * 1e6;                           % 剪断強度
+
+Mmotor = 100;                               % 回転子の質量
+Rmotor = 0.1;                               % 回転子の半径
+Jmotor = 0.5 * Mmotor * Rmotor ^ 2;         % 回転子軸に対する慣性モーメント
+Bmotor = 0.1;                               % 回転子の粘性摩擦係数(A CASO)
+R = 20;                                     % 接触子の抵抗
+Kt = 10;                                    % モーター定数
+
+gear = 20;                                  % ギア比
+
+Jload = 50*Jmotor;                          % 負荷の公称慣性モーメント
+Bload = 25;                                 % 負荷の公称粘性摩擦係数
+
+Ip = pi / 32 * dshaft ^ 4;                  % シャフトの極モーメント
+Kth = G * Ip / Lshaft;                      % ねじれ剛性 (トルク/角度)
+Vshaft = pi * (dshaft ^ 2) / 4 * Lshaft;    % シャフトの体積
+Mshaft = shaftrho * Vshaft;                 % シャフトの質量
+Jshaft = Mshaft * 0.5 * (dshaft ^ 2 / 4);   % シャフトの慣性モーメント
+"""
+
 
 class ServoMotorParameters:
-    Kt = 10.0
-    Bload = 25.0
+    Kt = 10.0       # Motor constant
+    Bload = 25.0    # Load viscous friction coefficient
 
 
 def create_plant_model_ABCD():
     PI = math.pi
 
-    Lshaft = 1.0
-    dshaft = 0.02
+    Lshaft = 1.0                        # Length of the shaft
+    dshaft = 0.02                       # Diameter of the shaft
+    # Density of the shaft material (carbon steel)
     shaftrho = 7850.0
-    G = 81500.0 * 1.0e6
+    G = 81500.0 * 1.0e6                 # Shear modulus
 
-    Mmotor = 100.0
-    Rmotor = 0.1
+    Mmotor = 100.0                      # Mass of the rotor
+    Rmotor = 0.1                        # Radius of the rotor
+    # Moment of inertia of the rotor about its axis
     Jmotor = 0.5 * Mmotor * Rmotor ** 2
+    # Viscous friction coefficient of the rotor (A CASO)
     Bmotor = 0.1
-    R = 20.0
-    Kt = sp.Symbol('Kt', real=True)
+    R = 20.0                            # Resistance of the contactor
+    Kt = sp.Symbol('Kt', real=True)     # Motor constant
 
-    gear = 20.0
+    gear = 20.0                         # Gear ratio
 
-    Jload = 50.0 * Jmotor
+    Jload = 50.0 * Jmotor               # Nominal moment of inertia of the load
+    # Nominal viscous friction coefficient of the load
     Bload = sp.Symbol('Bload', real=True)
 
-    Ip = PI / 32.0 * dshaft ** 4
-    Kth = G * Ip / Lshaft
-    Vshaft = PI * (dshaft ** 2) / 4.0 * Lshaft
-    Mshaft = shaftrho * Vshaft
+    Ip = PI / 32.0 * dshaft ** 4         # Polar moment of inertia of the shaft
+    Kth = G * Ip / Lshaft                # Torsional stiffness (Torque/Angle)
+    Vshaft = PI * (dshaft ** 2) / 4.0 * Lshaft  # Volume of the shaft
+    Mshaft = shaftrho * Vshaft           # Mass of the shaft
+    # Moment of inertia of the shaft
     Jshaft = Mshaft * 0.5 * (dshaft ** 2 / 4.0)
 
     JM = Jmotor
