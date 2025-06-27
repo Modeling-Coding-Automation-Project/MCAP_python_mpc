@@ -28,42 +28,8 @@ from sample.simulation_manager.signal_edit.sampler import PulseGenerator
 
 from mpc_utility.state_space_utility_deploy import StateSpaceUpdaterDeploy, ABCD_UPDATER_CLASS_NAME
 
-"""
-Lshaft = 1.0;                               % シャフト長さ
-dshaft = 0.02;                              % シャフト径
-shaftrho = 7850;                            % シャフトの密度 (炭素鋼)
-G = 81500 * 1e6;                            % 剛性率
-
-tauam = 50 * 1e6;                           % 剪断強度
-
-Mmotor = 100;                               % 回転子の質量
-Rmotor = 0.1;                               % 回転子の半径
-Jmotor = 0.5 * Mmotor * Rmotor ^ 2;         % 回転子軸に対する慣性モーメント
-Bmotor = 0.1;                               % 回転子の粘性摩擦係数(A CASO)
-R = 20;                                     % 接触子の抵抗
-Kt = 10;                                    % モーター定数
-
-gear = 20;                                  % ギア比
-
-Jload = 50*Jmotor;                          % 負荷の公称慣性モーメント
-Bload = 25;                                 % 負荷の公称粘性摩擦係数
-
-Ip = pi / 32 * dshaft ^ 4;                  % シャフトの極モーメント
-Kth = G * Ip / Lshaft;                      % ねじれ剛性 (トルク/角度)
-Vshaft = pi * (dshaft ^ 2) / 4 * Lshaft;    % シャフトの体積
-Mshaft = shaftrho * Vshaft;                 % シャフトの質量
-Jshaft = Mshaft * 0.5 * (dshaft ^ 2 / 4);   % シャフトの慣性モーメント
-"""
-
 
 class ServoMotorParameters:
-    Kt = 10.0       # Motor constant
-    Bload = 25.0    # Load viscous friction coefficient
-
-
-def create_plant_model_ABCD():
-    PI = math.pi
-
     Lshaft = 1.0                        # Length of the shaft
     dshaft = 0.02                       # Diameter of the shaft
     # Density of the shaft material (carbon steel)
@@ -72,12 +38,31 @@ def create_plant_model_ABCD():
 
     Mmotor = 100.0                      # Mass of the rotor
     Rmotor = 0.1                        # Radius of the rotor
-    # Moment of inertia of the rotor about its axis
-    Jmotor = 0.5 * Mmotor * Rmotor ** 2
+
     # Viscous friction coefficient of the rotor (A CASO)
     Bmotor = 0.1
     R = 20.0                            # Resistance of the contactor
-    Kt = sp.Symbol('Kt', real=True)     # Motor constant
+
+    Kt = 10.0       # Motor constant
+    Bload = 25.0    # Load viscous friction coefficient
+
+
+def create_plant_model_ABCD():
+    PI = math.pi
+
+    Lshaft = sp.Symbol('Lshaft', real=True)
+    dshaft = sp.Symbol('dshaft', real=True)
+    shaftrho = sp.Symbol('shaftrho', real=True)
+    G = sp.Symbol('G', real=True)
+
+    Mmotor = sp.Symbol('Mmotor', real=True)
+    Rmotor = sp.Symbol('Rmotor', real=True)
+    # Moment of inertia of the rotor about its axis
+    Jmotor = 0.5 * Mmotor * Rmotor ** 2
+
+    Bmotor = sp.Symbol('Bmotor', real=True)
+    R = sp.Symbol('R', real=True)
+    Kt = sp.Symbol('Kt', real=True)
 
     gear = 20.0                         # Gear ratio
 
