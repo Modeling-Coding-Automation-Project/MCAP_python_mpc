@@ -177,14 +177,11 @@ class MPC_PredictionMatrices:
         self.C_numeric = None
         self.initialize_ABC()
 
-        self.exponential_A_replacement_list, \
-            self._exponential_A_list = self._generate_exponential_A_list(
-                self.A_symbolic)
+        self._exponential_A_list = self._generate_exponential_A_list(
+            self.A_symbolic)
 
         self.F_symbolic = None
-        self.F_replacement = []
         self.Phi_symbolic = None
-        self.Phi_replacement = []
 
         self.F_numeric = None
         self.Phi_numeric = None
@@ -251,9 +248,8 @@ class MPC_PredictionMatrices:
         self.B_symbolic = B
         self.C_symbolic = C
 
-        self.exponential_A_replacement_list, \
-            self._exponential_A_list = self._generate_exponential_A_list(
-                self.A_symbolic)
+        self._exponential_A_list = self._generate_exponential_A_list(
+            self.A_symbolic)
 
     def substitute_symbolic(self, A: sp.Matrix, B: sp.Matrix, C: sp.Matrix):
 
@@ -297,9 +293,8 @@ class MPC_PredictionMatrices:
                 self.C_numeric[i, j] = self.C_symbolic[i, j].subs(
                     self.ABC_values)
 
-        self.exponential_A_replacement_list, \
-            self._exponential_A_list = self._generate_exponential_A_list(
-                self.A_numeric)
+        self._exponential_A_list = self._generate_exponential_A_list(
+            self.A_numeric)
 
     def substitute_numeric(self, A: np.ndarray, B: np.ndarray, C: np.ndarray) -> tuple:
         """
@@ -334,83 +329,54 @@ class MPC_PredictionMatrices:
             B (sp.Matrix): Input matrix.
             C (sp.Matrix): Output matrix.
         """
-        self.F_replacement, self.F_symbolic = self._build_F(C)
-        self.Phi_replacement, self.Phi_symbolic = self._build_Phi(B, C)
+        self.F_symbolic = self._build_F(C)
+        self.Phi_symbolic = self._build_Phi(B, C)
 
     def _generate_exponential_A_list(self, A: sp.Matrix):
 
         exponential_A_list = []
-        exponential_A_replacement_list = []
 
         for i in range(self.Np):
             if i == 0:
-                A_repl, A_red = sp.cse(A)
-
-                exponential_A_list.append(A_red[0])
-                if A_repl:
-                    exponential_A_replacement_list.extend(A_repl)
+                exponential_A_list.append(A)
             else:
-                A_repl, A_red = sp.cse(exponential_A_list[i - 1] * A)
+                exponential_A_list.append(exponential_A_list[i - 1] * A)
 
-                exponential_A_list.append(A_red[0])
-                if A_repl:
-                    exponential_A_replacement_list.extend(A_repl)
-
-        return exponential_A_replacement_list, exponential_A_list
+        return exponential_A_list
 
     def _build_F(self, C: sp.Matrix) -> sp.Matrix:
 
         F_expression = sp.zeros(self.OUTPUT_SIZE * self.Np, self.STATE_SIZE)
-        F_replacement = copy.deepcopy(self.exponential_A_replacement_list)
-
-        C_repl, C_red = sp.cse(C)
-        if C_repl:
-            F_replacement.append(C_repl)
 
         for i in range(self.Np):
             # C A^{i+1}
-            F = C_red[0] * self._exponential_A_list[i]
+            F = C * self._exponential_A_list[i]
 
             F_expression[i * self.OUTPUT_SIZE:(i + 1) *
                          self.OUTPUT_SIZE, :] = F
 
-        F_repl, F_red = sp.cse(F_expression)
-        F_replacement.extend(F_repl)
-
-        return F_replacement, F_red[0]
+        return F_expression
 
     def _build_Phi(self, B: sp.Matrix, C: sp.Matrix) -> sp.Matrix:
 
         Phi_expression = sp.zeros(self.OUTPUT_SIZE * self.Np,
                                   self.INPUT_SIZE * self.Nc)
-        Phi_replacement = copy.deepcopy(self.exponential_A_replacement_list)
-
-        C_repl, C_red = sp.cse(C)
-        if C_repl:
-            Phi_replacement.extend(C_repl)
-
-        B_repl, B_red = sp.cse(B)
-        if B_repl:
-            Phi_replacement.extend(B_repl)
 
         for i in range(self.Nc):
             for j in range(i, self.Np):
                 exponent = j - i
                 if exponent == 0:
-                    blok = C_red[0] * B_red[0]
+                    blok = C * B
                 else:
-                    blok = C_red[0] * \
-                        self._exponential_A_list[exponent - 1] * B_red[0]
+                    blok = C * \
+                        self._exponential_A_list[exponent - 1] * B
 
                 r0, c0 = j * self.OUTPUT_SIZE, i * self.INPUT_SIZE
 
                 Phi_expression[r0:r0 + self.OUTPUT_SIZE,
                                c0:c0 + self.INPUT_SIZE] = blok
 
-        Phi_repl, Phi_red = sp.cse(Phi_expression)
-        Phi_replacement.extend(Phi_repl)
-
-        return Phi_replacement, Phi_red[0]
+        return Phi_expression
 
 
 class MPC_ReferenceTrajectory:
