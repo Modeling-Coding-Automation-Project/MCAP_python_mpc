@@ -348,13 +348,13 @@ class MPC_PredictionMatrices:
 
                 exponential_A_list.append(A_red[0])
                 if A_repl:
-                    exponential_A_replacement_list.append(A_repl[0])
+                    exponential_A_replacement_list.extend(A_repl)
             else:
                 A_repl, A_red = sp.cse(exponential_A_list[i - 1] * A)
 
                 exponential_A_list.append(A_red[0])
                 if A_repl:
-                    exponential_A_replacement_list.append(A_repl[0])
+                    exponential_A_replacement_list.extend(A_repl)
 
         return exponential_A_replacement_list, exponential_A_list
 
@@ -365,7 +365,7 @@ class MPC_PredictionMatrices:
 
         C_repl, C_red = sp.cse(C)
         if C_repl:
-            F_replacement.append(C_repl[0])
+            F_replacement.append(C_repl)
 
         for i in range(self.Np):
             # C A^{i+1}
@@ -374,7 +374,10 @@ class MPC_PredictionMatrices:
             F_expression[i * self.OUTPUT_SIZE:(i + 1) *
                          self.OUTPUT_SIZE, :] = F
 
-        return F_replacement, F_expression
+        F_repl, F_red = sp.cse(F_expression)
+        F_replacement.extend(F_repl)
+
+        return F_replacement, F_red[0]
 
     def _build_Phi(self, B: sp.Matrix, C: sp.Matrix) -> sp.Matrix:
 
@@ -384,11 +387,11 @@ class MPC_PredictionMatrices:
 
         C_repl, C_red = sp.cse(C)
         if C_repl:
-            Phi_replacement.append(C_repl[0])
+            Phi_replacement.extend(C_repl)
 
         B_repl, B_red = sp.cse(B)
         if B_repl:
-            Phi_replacement.append(B_repl[0])
+            Phi_replacement.extend(B_repl)
 
         for i in range(self.Nc):
             for j in range(i, self.Np):
@@ -404,7 +407,10 @@ class MPC_PredictionMatrices:
                 Phi_expression[r0:r0 + self.OUTPUT_SIZE,
                                c0:c0 + self.INPUT_SIZE] = blok
 
-        return Phi_replacement, Phi_expression
+        Phi_repl, Phi_red = sp.cse(Phi_expression)
+        Phi_replacement.extend(Phi_repl)
+
+        return Phi_replacement, Phi_red[0]
 
 
 class MPC_ReferenceTrajectory:
