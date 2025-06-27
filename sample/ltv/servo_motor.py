@@ -30,6 +30,13 @@ from mpc_utility.state_space_utility_deploy import StateSpaceUpdaterDeploy, ABCD
 
 
 class ServoMotorParameters:
+    Kt = 10.0
+    Bload = 25.0
+
+
+def create_plant_model_ABCD():
+    PI = math.pi
+
     Lshaft = 1.0
     dshaft = 0.02
     shaftrho = 7850.0
@@ -37,32 +44,12 @@ class ServoMotorParameters:
 
     Mmotor = 100.0
     Rmotor = 0.1
-
+    Jmotor = 0.5 * Mmotor * Rmotor ** 2
     Bmotor = 0.1
     R = 20.0
-    Kt = 10.0
-
-    gear = 20.0
-
-    Bload = 25.0
-
-
-def create_plant_model_ABCD():
-    PI = math.pi
-
-    Lshaft = sp.Symbol('Lshaft', real=True)
-    dshaft = sp.Symbol('dshaft', real=True)
-    shaftrho = sp.Symbol('shaftrho', real=True)
-    G = sp.Symbol('G', real=True)
-
-    Mmotor = sp.Symbol('Mmotor', real=True)
-    Rmotor = sp.Symbol('Rmotor', real=True)
-    Jmotor = 0.5 * Mmotor * Rmotor ** 2
-    Bmotor = sp.Symbol('Bmotor', real=True)
-    R = sp.Symbol('R', real=True)
     Kt = sp.Symbol('Kt', real=True)
 
-    gear = sp.Symbol('gear', real=True)
+    gear = 20.0
 
     Jload = 50.0 * Jmotor
     Bload = sp.Symbol('Bload', real=True)
