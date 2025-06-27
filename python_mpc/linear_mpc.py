@@ -357,6 +357,10 @@ class LTV_MPC_NoConstraints:
             raise ValueError(
                 "the augmented state space output must have the same size of state_space.C.")
 
+        self.state_space_initializer.get_initial_embedded_integrator_ABC(
+            parameters_struct=self.parameters_struct,
+            state_space=self.augmented_ss)
+
         self.X_inner_model = np.zeros(
             (state_space.A.shape[0], 1))
         self.U_latest = np.zeros(
@@ -425,9 +429,9 @@ class LTV_MPC_NoConstraints:
         prediction_matrices.substitute_symbolic(
             self.augmented_ss.A, self.augmented_ss.B, sp.Matrix(Weight_Y) * self.augmented_ss.C)
 
-        Phi_numeric, F_numeric = self.state_space_initializer.get_initial_Phi_F(
-            self.parameters_struct,
-            Phi=prediction_matrices.Phi_symbolic,
-            F=prediction_matrices.F_symbolic)
+        # Phi_numeric, F_numeric = self.state_space_initializer.get_initial_Phi_F(
+        #     self.parameters_struct,
+        #     Phi=prediction_matrices.Phi_symbolic,
+        #     F=prediction_matrices.F_symbolic)
 
         return prediction_matrices
