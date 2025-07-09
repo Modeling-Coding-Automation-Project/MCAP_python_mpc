@@ -315,7 +315,7 @@ class MPC_PredictionMatrices:
         self.generate_symbolic_substitution(A, B, C)
         self.substitute_ABC_numeric_expression(A, B, C)
 
-        self.build_matrices_numeric(
+        self.build_matrices_numeric_expression(
             self.B_numeric_expression, self.C_numeric_expression)
 
         self.F_ndarray = symbolic_to_numeric_matrix(
@@ -323,15 +323,16 @@ class MPC_PredictionMatrices:
         self.Phi_ndarray = symbolic_to_numeric_matrix(
             self.Phi_numeric_expression)
 
-    def build_matrices_numeric(self, B: sp.Matrix, C: sp.Matrix) -> tuple:
+    def build_matrices_numeric_expression(
+            self, B: sp.Matrix, C: sp.Matrix) -> tuple:
         """
         Builds the F and Phi matrices based on the symbolic state-space model.
         Args:
             B (sp.Matrix): Input matrix.
             C (sp.Matrix): Output matrix.
         """
-        self.F_numeric_expression = self._build_F(C)
-        self.Phi_numeric_expression = self._build_Phi(B, C)
+        self.F_numeric_expression = self._build_F_expression(C)
+        self.Phi_numeric_expression = self._build_Phi_expression(B, C)
 
     def _generate_exponential_A_list(self, A: sp.Matrix):
 
@@ -345,7 +346,7 @@ class MPC_PredictionMatrices:
 
         return exponential_A_list
 
-    def _build_F(self, C: sp.Matrix) -> sp.Matrix:
+    def _build_F_expression(self, C: sp.Matrix) -> sp.Matrix:
 
         F_expression = sp.zeros(self.OUTPUT_SIZE * self.Np, self.STATE_SIZE)
 
@@ -358,7 +359,7 @@ class MPC_PredictionMatrices:
 
         return F_expression
 
-    def _build_Phi(self, B: sp.Matrix, C: sp.Matrix) -> sp.Matrix:
+    def _build_Phi_expression(self, B: sp.Matrix, C: sp.Matrix) -> sp.Matrix:
 
         Phi_expression = sp.zeros(self.OUTPUT_SIZE * self.Np,
                                   self.INPUT_SIZE * self.Nc)
