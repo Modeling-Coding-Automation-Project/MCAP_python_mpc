@@ -172,19 +172,19 @@ class MPC_PredictionMatrices:
         self.A_symbolic = None
         self.B_symbolic = None
         self.C_symbolic = None
-        self.A_numeric = None
-        self.B_numeric = None
-        self.C_numeric = None
+        self.A_numeric_expression = None
+        self.B_numeric_expression = None
+        self.C_numeric_expression = None
         self.initialize_ABC()
 
         self._exponential_A_list = self._generate_exponential_A_list(
             self.A_symbolic)
 
-        self.F_symbolic = None
-        self.Phi_symbolic = None
+        self.F_numeric_expression = None
+        self.Phi_numeric_expression = None
 
-        self.F_numeric = None
-        self.Phi_numeric = None
+        self.F_ndarray = None
+        self.Phi_ndarray = None
 
         self.ABC_values = {}
 
@@ -201,12 +201,12 @@ class MPC_PredictionMatrices:
         self.C_symbolic = sp.Matrix(self.OUTPUT_SIZE, self.STATE_SIZE,
                                     lambda i, j: sp.symbols(f'c{i+1}{j+1}'))
 
-        self.A_numeric = sp.Matrix(self.STATE_SIZE, self.STATE_SIZE,
-                                   lambda i, j: 0.0)
-        self.B_numeric = sp.Matrix(self.STATE_SIZE, self.INPUT_SIZE,
-                                   lambda i, j: 0.0)
-        self.C_numeric = sp.Matrix(self.OUTPUT_SIZE, self.STATE_SIZE,
-                                   lambda i, j: 0.0)
+        self.A_numeric_expression = sp.Matrix(self.STATE_SIZE, self.STATE_SIZE,
+                                              lambda i, j: 0.0)
+        self.B_numeric_expression = sp.Matrix(self.STATE_SIZE, self.INPUT_SIZE,
+                                              lambda i, j: 0.0)
+        self.C_numeric_expression = sp.Matrix(self.OUTPUT_SIZE, self.STATE_SIZE,
+                                              lambda i, j: 0.0)
 
     def generate_symbolic_substitution(self, A: np.ndarray, B: np.ndarray, C: np.ndarray):
         """
@@ -262,9 +262,9 @@ class MPC_PredictionMatrices:
 
         self.substitute_ABC_symbolic(A, B, C)
 
-        self.build_matrices(self.B_symbolic, self.C_symbolic)
+        self.build_matrices_calculation(self.B_symbolic, self.C_symbolic)
 
-    def substitute_ABC_numeric(self, A: np.ndarray, B: np.ndarray, C: np.ndarray):
+    def substitute_ABC_numeric_expression(self, A: np.ndarray, B: np.ndarray, C: np.ndarray):
         """
         Substitutes numeric values into the symbolic matrices A, B, and C.
         Args:
@@ -276,25 +276,25 @@ class MPC_PredictionMatrices:
                                     lambda i, j: sp.symbols(f'a{i+1}{j+1}'))
         for i in range(A.shape[0]):
             for j in range(A.shape[1]):
-                self.A_numeric[i, j] = self.A_symbolic[i, j].subs(
+                self.A_numeric_expression[i, j] = self.A_symbolic[i, j].subs(
                     self.ABC_values)
 
         self.B_symbolic = sp.Matrix(self.STATE_SIZE, self.INPUT_SIZE,
                                     lambda i, j: sp.symbols(f'b{i+1}{j+1}'))
         for i in range(B.shape[0]):
             for j in range(B.shape[1]):
-                self.B_numeric[i, j] = self.B_symbolic[i, j].subs(
+                self.B_numeric_expression[i, j] = self.B_symbolic[i, j].subs(
                     self.ABC_values)
 
         self.C_symbolic = sp.Matrix(self.OUTPUT_SIZE, self.STATE_SIZE,
                                     lambda i, j: sp.symbols(f'c{i+1}{j+1}'))
         for i in range(C.shape[0]):
             for j in range(C.shape[1]):
-                self.C_numeric[i, j] = self.C_symbolic[i, j].subs(
+                self.C_numeric_expression[i, j] = self.C_symbolic[i, j].subs(
                     self.ABC_values)
 
         self._exponential_A_list = self._generate_exponential_A_list(
-            self.A_numeric)
+            self.A_numeric_expression)
 
     def substitute_numeric(self, A: np.ndarray, B: np.ndarray, C: np.ndarray) -> tuple:
         """
@@ -313,24 +313,25 @@ class MPC_PredictionMatrices:
             C = symbolic_to_numeric_matrix(C)
 
         self.generate_symbolic_substitution(A, B, C)
-        self.substitute_ABC_numeric(A, B, C)
+        self.substitute_ABC_numeric_expression(A, B, C)
 
-        self.build_matrices(self.B_numeric, self.C_numeric)
+        self.build_matrices_numeric(
+            self.B_numeric_expression, self.C_numeric_expression)
 
-        self.F_numeric = symbolic_to_numeric_matrix(
-            self.F_symbolic)
-        self.Phi_numeric = symbolic_to_numeric_matrix(
-            self.Phi_symbolic)
+        self.F_ndarray = symbolic_to_numeric_matrix(
+            self.F_numeric_expression)
+        self.Phi_ndarray = symbolic_to_numeric_matrix(
+            self.Phi_numeric_expression)
 
-    def build_matrices(self, B: sp.Matrix, C: sp.Matrix) -> tuple:
+    def build_matrices_numeric(self, B: sp.Matrix, C: sp.Matrix) -> tuple:
         """
         Builds the F and Phi matrices based on the symbolic state-space model.
         Args:
             B (sp.Matrix): Input matrix.
             C (sp.Matrix): Output matrix.
         """
-        self.F_symbolic = self._build_F(C)
-        self.Phi_symbolic = self._build_Phi(B, C)
+        self.F_numeric_expression = self._build_F(C)
+        self.Phi_numeric_expression = self._build_Phi(B, C)
 
     def _generate_exponential_A_list(self, A: sp.Matrix):
 

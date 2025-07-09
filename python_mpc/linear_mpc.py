@@ -79,7 +79,7 @@ class LTI_MPC_NoConstraints:
             (self.AUGMENTED_INPUT_SIZE * self.Nc,
              self.AUGMENTED_OUTPUT_SIZE * self.Np))
         self.update_solver_factor(
-            self.prediction_matrices.Phi_numeric, self.Weight_U_Nc)
+            self.prediction_matrices.Phi_ndarray, self.Weight_U_Nc)
 
         self.Y_store = DelayedVectorObject(self.AUGMENTED_OUTPUT_SIZE,
                                            self.Number_of_Delay)
@@ -192,7 +192,7 @@ class LTI_MPC_NoConstraints:
         """
         # (Phi^T * Phi + Weight)^-1 * Phi^T * (Trajectory - Fx)
         delta_U = self.solver_factor @ reference_trajectory.calculate_dif(
-            self.prediction_matrices.F_numeric @ X_augmented)
+            self.prediction_matrices.F_ndarray @ X_augmented)
 
         return delta_U
 
@@ -286,8 +286,8 @@ class LTI_MPC(LTI_MPC_NoConstraints):
             U=self.U_latest,
             X_augmented=np.vstack(
                 (self.X_inner_model, self.Y_store.get())),
-            Phi=self.prediction_matrices.Phi_numeric,
-            F=self.prediction_matrices.F_numeric,
+            Phi=self.prediction_matrices.Phi_ndarray,
+            F=self.prediction_matrices.F_ndarray,
             Weight_U_Nc=self.Weight_U_Nc,
             delta_U_Nc=delta_U_Nc,
             delta_U_min=delta_U_min, delta_U_max=delta_U_max,
@@ -307,12 +307,12 @@ class LTI_MPC(LTI_MPC_NoConstraints):
         self.qp_solver.update_constraints(
             U=self.U_latest,
             X_augmented=X_augmented,
-            Phi=self.prediction_matrices.Phi_numeric,
-            F=self.prediction_matrices.F_numeric)
+            Phi=self.prediction_matrices.Phi_ndarray,
+            F=self.prediction_matrices.F_ndarray)
 
         delta_U = self.qp_solver.solve(
-            Phi=self.prediction_matrices.Phi_numeric,
-            F=self.prediction_matrices.F_numeric,
+            Phi=self.prediction_matrices.Phi_ndarray,
+            F=self.prediction_matrices.F_ndarray,
             reference_trajectory=reference_trajectory,
             X_augmented=X_augmented)
 
@@ -379,7 +379,7 @@ class LTV_MPC_NoConstraints:
         #     (self.AUGMENTED_INPUT_SIZE * self.Nc,
         #      self.AUGMENTED_OUTPUT_SIZE * self.Np))
         # self.update_solver_factor(
-        #     self.prediction_matrices.Phi_numeric, self.Weight_U_Nc)
+        #     self.prediction_matrices.Phi_ndarray, self.Weight_U_Nc)
 
         # self.Y_store = DelayedVectorObject(self.AUGMENTED_OUTPUT_SIZE,
         #                                    self.Number_of_Delay)
@@ -429,7 +429,7 @@ class LTV_MPC_NoConstraints:
         prediction_matrices.substitute_symbolic(
             self.augmented_ss.A, self.augmented_ss.B, sp.Matrix(Weight_Y) * self.augmented_ss.C)
 
-        # Phi_numeric, F_numeric = self.state_space_initializer.get_initial_Phi_F(
+        # Phi_ndarray, F_ndarray = self.state_space_initializer.get_initial_Phi_F(
         #     self.parameters_struct,
         #     Phi=prediction_matrices.Phi_symbolic,
         #     F=prediction_matrices.F_symbolic)
