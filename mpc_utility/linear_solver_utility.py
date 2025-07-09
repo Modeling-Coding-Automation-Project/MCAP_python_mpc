@@ -684,7 +684,7 @@ class LTI_MPC_QP_Solver:
             if Phi_factor_norm < self.tol:
                 print("[Warning] " +
                       f"Y[{i}] min cannot be constrained because Phi row is zero. " +
-                      f"Y[{i}] min constraint is no linger considered.")
+                      f"Y[{i}] min constraint is no longer considered.")
 
                 self.DU_U_Y_Limits.set_Y_min_inactive(i)
 
@@ -696,7 +696,7 @@ class LTI_MPC_QP_Solver:
 
                 print("[Warning] " +
                       f"Y[{i}] max cannot be constrained because Phi row is zero. " +
-                      f"Y[{i}] max constraint is no linger considered.")
+                      f"Y[{i}] max constraint is no longer considered.")
 
                 self.DU_U_Y_Limits.set_Y_max_inactive(i)
 
