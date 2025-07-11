@@ -374,6 +374,11 @@ class LTV_MPC_NoConstraints:
 
         self.Weight_U_Nc = self.update_weight(Weight_U)
 
+        self.state_space_initializer.get_prediction_matrices_phi_f(
+            Np=Np,
+            Nc=Nc,
+            state_space=self.augmented_ss)
+
         self.prediction_matrices = self.create_prediction_matrices()
 
         # self.solver_factor = np.zeros(

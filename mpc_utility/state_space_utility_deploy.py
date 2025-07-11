@@ -13,13 +13,17 @@ from mpc_utility.state_space_utility import StateSpaceEmbeddedIntegrator
 
 MPC_STATE_SPACE_UPDATER_FILE_NAME = "mpc_state_space_updater.py"
 MPC_EMBEDDED_INTEGRATOR_UPDATER_FILE_NAME = "mpc_embedded_integrator_state_space_updater.py"
+PREDICTION_MATRICES_PHI_F_UPDATER_FILE_NAME = "prediction_matrices_phi_f_updater.py"
 
 MPC_STATESPACE_UPDATER_CLASS_NAME = "MPC_StateSpace_Updater"
 EMBEDDED_INTEGRATOR_UPDATER_CLASS_NAME = "EmbeddedIntegrator_Updater"
+PREDICTION_MATRICES_PHI_F_UPDATER_CLASS_NAME = "PredictionMatricesPhiF_Updater"
+
 A_UPDATER_FUNCTION_NAME = "update_A"
 B_UPDATER_FUNCTION_NAME = "update_B"
 C_UPDATER_FUNCTION_NAME = "update_C"
 D_UPDATER_FUNCTION_NAME = "update_D"
+PHI_F_UPDATER_FUNCTION_NAME = "update_Phi_F"
 
 A_UPDATER_CLASS_NAME = "A_Updater"
 B_UPDATER_CLASS_NAME = "B_Updater"
@@ -199,7 +203,7 @@ class LTV_MPC_StateSpaceInitializer:
     def __init__(self):
         self.ABCD_sympy_function_generated = False
         self.embedded_integrator_ABC_function_generated = False
-        self.Phi_F_sympy_function_generated = False
+        self.Phi_F_function_generated = False
 
     def get_initial_MPC_StateSpace(self, parameters_struct,
                                    A: sp.Matrix = None, B: sp.Matrix = None,
@@ -250,39 +254,74 @@ class LTV_MPC_StateSpaceInitializer:
             class_name=EMBEDDED_INTEGRATOR_UPDATER_CLASS_NAME,
             file_name=file_name)
 
-    # def get_initial_Phi_F(self, parameters_struct,
-    #                       Phi: sp.Matrix = None, F: sp.Matrix = None,
-    #                       file_name: str = MPC_STATE_SPACE_UPDATER_FILE_NAME):
-    #     if Phi is None:
-    #         raise ValueError("Phi matrices must be provided.")
-    #     if F is None:
-    #         raise ValueError("F matrices must be provided.")
+    def get_prediction_matrices_phi_f(
+            self, Np: int, Nc: int,
+            state_space: StateSpaceEmbeddedIntegrator = None,
+            file_name: str = PREDICTION_MATRICES_PHI_F_UPDATER_FILE_NAME):
 
-    #     code_text, arguments_text = ExpressionDeploy.create_sympy_code(Phi)
+        if state_space is None:
+            raise ValueError("State space must be provided.")
+        if not isinstance(state_space, StateSpaceEmbeddedIntegrator):
+            raise TypeError(
+                "State space must be an instance of StateSpaceEmbeddedIntegrator.")
 
-    #     code_text += "\n\n"
-    #     code_text += "class Phi_Updater:\n\n"
-    #     code_text += "    @staticmethod\n"
-    #     code_text += "    def update(" + StateSpaceUpdaterDeploy.write_param_names_argument(
-    #         [k for k in vars(type(parameters_struct)) if not k.startswith('__')]) + "):\n"
-    #     code_text += "        return " + code_text
+        Phi_shape = (Np * state_space.C.shape[0], Nc * state_space.B.shape[1])
+        F_shape = (Np * state_space.C.shape[0], state_space.A.shape[1])
 
-    #     with open(file_name, "a", encoding="utf-8") as f:
-    #         f.write(code_text)
+        code_text = ""
+        code_text += "from typing import Tuple\n"
+        code_text += "import numpy as np\n\n\n"
 
-    #     # self.Phi_F_sympy_function_generated = True
+        code_text += "class " + PREDICTION_MATRICES_PHI_F_UPDATER_CLASS_NAME + ":\n\n"
+        code_text += "    @staticmethod\n"
+        code_text += "    def " + PHI_F_UPDATER_FUNCTION_NAME + \
+            "(A: np.ndarray, B: np.ndarray, C: np.ndarray) -> " + \
+            f"Tuple[Tuple[{Phi_shape[0]}, {Phi_shape[1]}], Tuple[{F_shape[0]}, {F_shape[1]}]]:\n\n"
 
-    #     # local_vars = {"parameters_struct": parameters_struct}
+        code_text += "        Phi = np.zeros(" + str(Phi_shape) + ")\n"
+        code_text += "        F = np.zeros(" + str(F_shape) + ")\n\n"
 
-    #     # file_name_no_extension = os.path.splitext(file_name)[0]
+        # Create intermediate variables for C @ A and C @ B
+        for i in range(Np):
+            if i == 0:
+                code_text += f"        C_A_1 = C @ A\n"
+            else:
+                code_text += f"        C_A_{i + 1} = C_A_{i} @ A\n"
 
-    #     # exe_code = (
-    #     #     f"from {file_name_no_extension} import Phi_Updater\n"
-    #     #     "Phi_numeric = Phi_Updater.update(parameters_struct)\n"
-    #     # )
+        code_text += "\n"
 
-    #     # exec(exe_code, globals(), local_vars)
+        for i in range(Np):
+            if i == 0:
+                code_text += f"        C_A_0_B = C @ B\n"
+            else:
+                code_text += f"        C_A_{i}_B = C_A_{i} @ B\n"
 
-    #     # Phi_numeric = local_vars["Phi_numeric"]
+        code_text += "\n"
 
-    #     return np.array[[0, 0], [0, 0]], np.array[[0], [0]]
+        # substitute Phi
+        for i in range(Np):
+            for j in range(Nc):
+                row_index = i - j
+                if row_index >= 0:
+                    for k in range(state_space.C.shape[0]):
+                        for l in range(state_space.B.shape[1]):
+                            code_text += \
+                                f"        Phi[{i * state_space.C.shape[0] + k}, {j * state_space.B.shape[1] + l}] = " + \
+                                f"C_A_{row_index}_B[{k}, {l}]\n"
+
+            code_text += "\n"
+        code_text += "\n"
+
+        # substitute F
+        for i in range(Np):
+            for k in range(state_space.C.shape[0]):
+                for l in range(state_space.A.shape[1]):
+                    code_text += \
+                        f"        F[{i * state_space.C.shape[0] + k}, {l}] = C_A_{i}_B[{k}, {l}]\n"
+            code_text += "\n"
+        code_text += "\n"
+
+        code_text += "        return Phi, F\n\n"
+
+        with open(file_name, "w", encoding="utf-8") as f:
+            f.write(code_text)
