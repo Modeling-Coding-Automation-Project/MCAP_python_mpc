@@ -432,12 +432,14 @@ class LTV_MPC_NoConstraints:
                 (0 == len(self.augmented_ss.C.free_symbols)):
             raise ValueError("State space model must be symbolic.")
 
-        prediction_matrices.substitute_symbolic(
-            self.augmented_ss.A, self.augmented_ss.B, self.augmented_ss.C)
+        from mpc_embedded_integrator_state_space_updater import EmbeddedIntegrator_Updater
+        A, B, C, D = EmbeddedIntegrator_Updater.update(
+            parameters=self.parameters_struct)
 
-        # Phi_ndarray, F_ndarray = self.state_space_initializer.get_initial_Phi_F(
-        #     self.parameters_struct,
-        #     Phi=prediction_matrices.Phi_symbolic,
-        #     F=prediction_matrices.F_symbolic)
+        from prediction_matrices_phi_f_updater import PredictionMatricesPhiF_Updater
+        Phi, F = PredictionMatricesPhiF_Updater.update_Phi_F(A, B, C)
+
+        prediction_matrices.Phi_ndarray = Phi
+        prediction_matrices.F_ndarray = F
 
         return prediction_matrices

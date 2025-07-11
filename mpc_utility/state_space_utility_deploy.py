@@ -15,7 +15,7 @@ MPC_STATE_SPACE_UPDATER_FILE_NAME = "mpc_state_space_updater.py"
 MPC_EMBEDDED_INTEGRATOR_UPDATER_FILE_NAME = "mpc_embedded_integrator_state_space_updater.py"
 PREDICTION_MATRICES_PHI_F_UPDATER_FILE_NAME = "prediction_matrices_phi_f_updater.py"
 
-MPC_STATESPACE_UPDATER_CLASS_NAME = "MPC_StateSpace_Updater"
+MPC_STATE_SPACE_UPDATER_CLASS_NAME = "MPC_StateSpace_Updater"
 EMBEDDED_INTEGRATOR_UPDATER_CLASS_NAME = "EmbeddedIntegrator_Updater"
 PREDICTION_MATRICES_PHI_F_UPDATER_CLASS_NAME = "PredictionMatricesPhiF_Updater"
 
@@ -188,7 +188,7 @@ class StateSpaceUpdaterDeploy:
             B: sp.Matrix = None,
             C: sp.Matrix = None,
             D: sp.Matrix = None,
-            class_name: str = MPC_STATESPACE_UPDATER_CLASS_NAME,
+            class_name: str = MPC_STATE_SPACE_UPDATER_CLASS_NAME,
             file_name: str = MPC_STATE_SPACE_UPDATER_FILE_NAME):
 
         code_text = StateSpaceUpdaterDeploy.create_ABCD_update_code(
@@ -201,6 +201,14 @@ class StateSpaceUpdaterDeploy:
 
 class LTV_MPC_StateSpaceInitializer:
     def __init__(self):
+        self.MPC_STATE_SPACE_UPDATER_FILE_NAME = MPC_STATE_SPACE_UPDATER_FILE_NAME
+        self.MPC_EMBEDDED_INTEGRATOR_UPDATER_FILE_NAME = MPC_EMBEDDED_INTEGRATOR_UPDATER_FILE_NAME
+        self.PREDICTION_MATRICES_PHI_F_UPDATER_FILE_NAME = PREDICTION_MATRICES_PHI_F_UPDATER_FILE_NAME
+
+        self.MPC_STATE_SPACE_UPDATER_CLASS_NAME = MPC_STATE_SPACE_UPDATER_CLASS_NAME
+        self.EMBEDDED_INTEGRATOR_UPDATER_CLASS_NAME = EMBEDDED_INTEGRATOR_UPDATER_CLASS_NAME
+        self.PREDICTION_MATRICES_PHI_F_UPDATER_CLASS_NAME = PREDICTION_MATRICES_PHI_F_UPDATER_CLASS_NAME
+
         self.ABCD_sympy_function_generated = False
         self.embedded_integrator_ABC_function_generated = False
         self.Phi_F_function_generated = False
@@ -211,7 +219,7 @@ class LTV_MPC_StateSpaceInitializer:
                                             file_name: str = MPC_STATE_SPACE_UPDATER_FILE_NAME):
         StateSpaceUpdaterDeploy.create_write_ABCD_update_code(
             argument_struct=parameters_struct,
-            A=A, B=B, C=C, D=D, class_name=MPC_STATESPACE_UPDATER_CLASS_NAME,
+            A=A, B=B, C=C, D=D, class_name=MPC_STATE_SPACE_UPDATER_CLASS_NAME,
             file_name=file_name)
 
         local_vars = {"parameters_struct": parameters_struct}
@@ -220,9 +228,9 @@ class LTV_MPC_StateSpaceInitializer:
 
         exe_code = (
             f"from {file_name_no_extension} import " +
-            MPC_STATESPACE_UPDATER_CLASS_NAME + "\n"
+            MPC_STATE_SPACE_UPDATER_CLASS_NAME + "\n"
             "A_numeric, B_numeric, C_numeric, D_numeric = " +
-            MPC_STATESPACE_UPDATER_CLASS_NAME + ".update(parameters_struct)\n"
+            MPC_STATE_SPACE_UPDATER_CLASS_NAME + ".update(parameters_struct)\n"
         )
 
         exec(exe_code, globals(), local_vars)

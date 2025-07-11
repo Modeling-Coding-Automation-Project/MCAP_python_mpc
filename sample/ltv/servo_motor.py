@@ -27,7 +27,7 @@ from sample.simulation_manager.visualize.simulation_plotter import SimulationPlo
 from sample.simulation_manager.signal_edit.sampler import PulseGenerator
 
 from mpc_utility.state_space_utility_deploy import StateSpaceUpdaterDeploy
-from mpc_utility.state_space_utility_deploy import MPC_STATESPACE_UPDATER_CLASS_NAME
+from mpc_utility.state_space_utility_deploy import MPC_STATE_SPACE_UPDATER_CLASS_NAME
 
 
 class ServoMotorParameters:

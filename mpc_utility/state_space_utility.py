@@ -248,19 +248,6 @@ class MPC_PredictionMatrices:
         self.B_symbolic = B
         self.C_symbolic = C
 
-    def substitute_symbolic(self, A: sp.Matrix, B: sp.Matrix, C: sp.Matrix):
-
-        if not isinstance(A, sp.MatrixBase):
-            raise ValueError("A must be a sympy matrix.")
-        if not isinstance(B, sp.MatrixBase):
-            raise ValueError("B must be a sympy matrix.")
-        if not isinstance(C, sp.MatrixBase):
-            raise ValueError("C must be a sympy matrix.")
-
-        self.substitute_ABC_symbolic(A, B, C)
-
-        self._build_matrices_calculation()
-
     def substitute_ABC_numeric_expression(self, A: np.ndarray, B: np.ndarray, C: np.ndarray):
         """
         Substitutes numeric values into the symbolic matrices A, B, and C.
@@ -376,9 +363,6 @@ class MPC_PredictionMatrices:
                                c0:c0 + self.INPUT_SIZE] = blok
 
         return Phi_expression
-
-    def _build_matrices_calculation(self):
-        pass
 
 
 class MPC_ReferenceTrajectory:
