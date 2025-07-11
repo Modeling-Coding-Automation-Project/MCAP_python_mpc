@@ -537,14 +537,19 @@ class LTV_MPC_NoConstraints:
         """
         Updates the internal parameters of the MPC controller at runtime.
 
-        This method updates the state-space matrices (A, B, C) of the Kalman filter
-        and the prediction matrices using the provided parameters structure. It is
-        intended to be called when model or controller parameters need to be changed
-        during operation.
+        This method updates the Kalman filter's state-space matrices (A, B, C),
+        the prediction matrices, and the solver factorization based on the provided
+        parameters structure.
 
         Args:
             parameters_struct: An object or dictionary containing the updated
-                parameters required for the state-space and prediction matrices.
+                parameters required for the state-space model and prediction matrices.
+
+        Side Effects:
+            - Modifies the Kalman filter's A, B, and C matrices.
+            - Updates the prediction matrices used for MPC.
+            - Recomputes the solver factorization with the new prediction matrices
+              and control weights.
         """
         self.kalman_filter.A, \
             self.kalman_filter.B, \
@@ -554,6 +559,9 @@ class LTV_MPC_NoConstraints:
 
         self.prediction_matrices.update_Phi_F_runtime(
             parameters_struct)
+
+        self.update_solver_factor(
+            self.prediction_matrices.Phi_ndarray, self.Weight_U_Nc)
 
     def update_manipulation(self, reference: np.ndarray, Y: np.ndarray):
         """
