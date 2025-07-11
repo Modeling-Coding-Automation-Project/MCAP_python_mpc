@@ -201,10 +201,10 @@ class LTV_MPC_StateSpaceInitializer:
         self.embedded_integrator_ABC_function_generated = False
         self.Phi_F_sympy_function_generated = False
 
-    def get_initial_ABCD(self, parameters_struct,
-                         A: sp.Matrix = None, B: sp.Matrix = None,
-                         C: sp.Matrix = None, D: sp.Matrix = None,
-                         file_name: str = MPC_STATE_SPACE_UPDATER_FILE_NAME):
+    def get_initial_MPC_StateSpace(self, parameters_struct,
+                                   A: sp.Matrix = None, B: sp.Matrix = None,
+                                   C: sp.Matrix = None, D: sp.Matrix = None,
+                                   file_name: str = MPC_STATE_SPACE_UPDATER_FILE_NAME):
         StateSpaceUpdaterDeploy.create_write_ABCD_update_code(
             argument_struct=parameters_struct,
             A=A, B=B, C=C, D=D, class_name=MPC_STATESPACE_UPDATER_CLASS_NAME,
@@ -232,7 +232,7 @@ class LTV_MPC_StateSpaceInitializer:
 
         return A_numeric, B_numeric, C_numeric, D_numeric
 
-    def get_initial_embedded_integrator_ABC(
+    def get_initial_embedded_integrator(
             self, parameters_struct,
             state_space: StateSpaceEmbeddedIntegrator = None,
             file_name: str = MPC_EMBEDDED_INTEGRATOR_UPDATER_FILE_NAME):

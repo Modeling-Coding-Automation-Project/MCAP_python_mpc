@@ -248,9 +248,6 @@ class MPC_PredictionMatrices:
         self.B_symbolic = B
         self.C_symbolic = C
 
-        self._exponential_A_list = self._generate_exponential_A_list(
-            self.A_symbolic)
-
     def substitute_symbolic(self, A: sp.Matrix, B: sp.Matrix, C: sp.Matrix):
 
         if not isinstance(A, sp.MatrixBase):
@@ -262,7 +259,7 @@ class MPC_PredictionMatrices:
 
         self.substitute_ABC_symbolic(A, B, C)
 
-        # self.build_matrices_calculation(self.B_symbolic, self.C_symbolic)
+        self._build_matrices_calculation()
 
     def substitute_ABC_numeric_expression(self, A: np.ndarray, B: np.ndarray, C: np.ndarray):
         """
@@ -379,6 +376,9 @@ class MPC_PredictionMatrices:
                                c0:c0 + self.INPUT_SIZE] = blok
 
         return Phi_expression
+
+    def _build_matrices_calculation(self):
+        pass
 
 
 class MPC_ReferenceTrajectory:

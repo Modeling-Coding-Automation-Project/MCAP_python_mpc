@@ -345,6 +345,7 @@ class LTV_MPC_NoConstraints:
             state_space, self.parameters_struct, Q_kf, R_kf)
 
         self.augmented_ss = StateSpaceEmbeddedIntegrator(state_space)
+        self.augmented_ss.C = sp.Matrix(Weight_Y) * self.augmented_ss.C
 
         self.AUGMENTED_STATE_SIZE = self.augmented_ss.A.shape[0]
 
@@ -357,7 +358,7 @@ class LTV_MPC_NoConstraints:
             raise ValueError(
                 "the augmented state space output must have the same size of state_space.C.")
 
-        self.state_space_initializer.get_initial_embedded_integrator_ABC(
+        self.state_space_initializer.get_initial_embedded_integrator(
             parameters_struct=self.parameters_struct,
             state_space=self.augmented_ss)
 
@@ -373,7 +374,7 @@ class LTV_MPC_NoConstraints:
 
         self.Weight_U_Nc = self.update_weight(Weight_U)
 
-        self.prediction_matrices = self.create_prediction_matrices(Weight_Y)
+        self.prediction_matrices = self.create_prediction_matrices()
 
         # self.solver_factor = np.zeros(
         #     (self.AUGMENTED_INPUT_SIZE * self.Nc,
@@ -394,7 +395,7 @@ class LTV_MPC_NoConstraints:
         if R_kf is None:
             R_kf = np.eye(state_space.C.shape[0])
 
-        A, B, C, _ = self.state_space_initializer.get_initial_ABCD(
+        A, B, C, _ = self.state_space_initializer.get_initial_MPC_StateSpace(
             parameters_struct, state_space.A, state_space.B, state_space.C)
 
         lkf = LinearKalmanFilter(
@@ -412,7 +413,7 @@ class LTV_MPC_NoConstraints:
 
         return np.diag(np.tile(Weight, (self.Nc, 1)).flatten())
 
-    def create_prediction_matrices(self, Weight_Y: np.ndarray) -> MPC_PredictionMatrices:
+    def create_prediction_matrices(self) -> MPC_PredictionMatrices:
 
         prediction_matrices = MPC_PredictionMatrices(
             Np=self.Np,
@@ -427,7 +428,7 @@ class LTV_MPC_NoConstraints:
             raise ValueError("State space model must be symbolic.")
 
         prediction_matrices.substitute_symbolic(
-            self.augmented_ss.A, self.augmented_ss.B, sp.Matrix(Weight_Y) * self.augmented_ss.C)
+            self.augmented_ss.A, self.augmented_ss.B, self.augmented_ss.C)
 
         # Phi_ndarray, F_ndarray = self.state_space_initializer.get_initial_Phi_F(
         #     self.parameters_struct,
