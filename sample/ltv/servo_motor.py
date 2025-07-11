@@ -195,6 +195,7 @@ def main():
 
         # controller
         ref = np.array([[input_signal[i, 0]], [0.0]])
+        ltv_mpc.update_parameters(parameters)
         U = ltv_mpc.update_manipulation(ref, y_measured)
 
         plotter.append_name(ref, "ref")
