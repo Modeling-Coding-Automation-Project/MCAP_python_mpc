@@ -179,7 +179,8 @@ def main():
     ideal_plant_model = SymbolicStateSpace(
         sym_Ad, sym_Bd, sym_Cd, delta_time=dt, Number_of_Delay=Number_of_Delay)
 
-    parameters = ServoMotorParameters()
+    plant_parameters = ServoMotorParameters()
+    controller_parameters = ServoMotorParameters()
 
     Weight_U = np.diag([0.001])
     Weight_Y = np.diag([1.0, 0.005])
@@ -188,12 +189,12 @@ def main():
     Nc = 2
 
     ltv_mpc = LTV_MPC_NoConstraints(state_space=ideal_plant_model,
-                                    parameters_struct=parameters,
+                                    parameters_struct=controller_parameters,
                                     Np=Np, Nc=Nc,
                                     Weight_U=Weight_U, Weight_Y=Weight_Y)
 
     # %% simulation
-    t_sim = 20.0
+    t_sim = 80.0
     time = np.arange(0, t_sim, dt)
 
     # create input signal
@@ -208,7 +209,7 @@ def main():
 
     # real plant model
     # You can change the characteristic with changing the A, B, C matrices
-    A, B, C, _ = StateSpaceUpdater.update(parameters)
+    A, B, C, _ = StateSpaceUpdater.update(plant_parameters)
 
     X = np.array([[0.0],
                   [0.0],
@@ -224,7 +225,17 @@ def main():
     y_store = [Y] * (Number_of_Delay + 1)
     delay_index = 0
 
+    PARAMETER_CHANGE_TIME = 20.0
+    parameter_changed = False
+    MPC_UPDATE_TIME = 40.0
+    MPC_updated = False
+
     for i in range(len(time)):
+        if not parameter_changed and time[i] > PARAMETER_CHANGE_TIME:
+            plant_parameters.Mmotor = 250.0
+            A, B, C, _ = StateSpaceUpdater.update(plant_parameters)
+            parameter_changed = True
+
         # system response
         X = A @ X + B @ U
         y_store[delay_index] = C @ X
@@ -238,7 +249,12 @@ def main():
 
         # controller
         ref = np.array([[input_signal[i, 0]], [0.0]])
-        ltv_mpc.update_parameters(parameters)
+
+        if not MPC_updated and time[i] > MPC_UPDATE_TIME:
+            controller_parameters.Mmotor = 250.0
+            ltv_mpc.update_parameters(controller_parameters)
+            MPC_updated = True
+
         U = ltv_mpc.update_manipulation(ref, y_measured)
 
         plotter.append_name(ref, "ref")
