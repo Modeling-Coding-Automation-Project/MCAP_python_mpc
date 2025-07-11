@@ -152,7 +152,8 @@ class LTI_MPC_NoConstraints:
         """
         Creates a reference trajectory for the MPC controller.
         Args:
-            reference_trajectory (np.ndarray): The reference trajectory, which can be a single row vector or multiple row vectors.
+            reference_trajectory (np.ndarray): The reference trajectory,
+            which can be a single row vector or multiple row vectors.
         Returns:
             MPC_ReferenceTrajectory: An instance containing the reference trajectory.
         """
@@ -381,16 +382,16 @@ class LTV_MPC_NoConstraints:
 
         self.prediction_matrices = self.create_prediction_matrices()
 
-        # self.solver_factor = np.zeros(
-        #     (self.AUGMENTED_INPUT_SIZE * self.Nc,
-        #      self.AUGMENTED_OUTPUT_SIZE * self.Np))
-        # self.update_solver_factor(
-        #     self.prediction_matrices.Phi_ndarray, self.Weight_U_Nc)
+        self.solver_factor = np.zeros(
+            (self.AUGMENTED_INPUT_SIZE * self.Nc,
+             self.AUGMENTED_OUTPUT_SIZE * self.Np))
+        self.update_solver_factor(
+            self.prediction_matrices.Phi_ndarray, self.Weight_U_Nc)
 
-        # self.Y_store = DelayedVectorObject(self.AUGMENTED_OUTPUT_SIZE,
-        #                                    self.Number_of_Delay)
+        self.Y_store = DelayedVectorObject(self.AUGMENTED_OUTPUT_SIZE,
+                                           self.Number_of_Delay)
 
-        # self.is_ref_trajectory = is_ref_trajectory
+        self.is_ref_trajectory = is_ref_trajectory
 
     def initialize_kalman_filter(self, state_space: SymbolicStateSpace,
                                  parameters_struct,
@@ -441,3 +442,115 @@ class LTV_MPC_NoConstraints:
             parameters_struct=self.parameters_struct)
 
         return prediction_matrices
+
+    def create_reference_trajectory(self, reference_trajectory: np.ndarray):
+        """
+        Creates a reference trajectory for the MPC controller.
+        Args:
+            reference_trajectory (np.ndarray): The reference trajectory,
+            which can be a single row vector or multiple row vectors.
+        Returns:
+            MPC_ReferenceTrajectory: An instance containing the reference trajectory.
+        """
+        if self.is_ref_trajectory:
+            if not ((reference_trajectory.shape[1] == self.Np) or
+                    (reference_trajectory.shape[1] == 1)):
+                raise ValueError(
+                    "Reference vector must be either a single row vector or a Np row vectors.")
+
+        trajectory = MPC_ReferenceTrajectory(reference_trajectory, self.Np)
+
+        return trajectory
+
+    def update_solver_factor(self, Phi: np.ndarray, Weight_U_Nc: np.ndarray):
+        """
+        Updates the solver factor for the MPC controller.
+        Args:
+            Phi (np.ndarray): The prediction matrix Phi.
+            Weight_U_Nc (np.ndarray): The weight matrix for the control input.
+        Returns:
+            None
+        """
+        if (Phi.shape[1] != Weight_U_Nc.shape[0]) or (Phi.shape[1] != Weight_U_Nc.shape[1]):
+            raise ValueError("Weight must have compatible dimensions.")
+
+        self.solver_factor = np.linalg.solve(Phi.T @ Phi + Weight_U_Nc, Phi.T)
+
+    def solve(self, reference_trajectory: MPC_ReferenceTrajectory,
+              X_augmented: np.ndarray):
+        """
+        Solves the MPC optimization problem to compute the control input.
+        Args:
+            reference_trajectory (MPC_ReferenceTrajectory): The reference trajectory for the MPC controller.
+            X_augmented (np.ndarray): The augmented state vector, which includes the state and output.
+        Returns:
+            np.ndarray: The computed control input delta_U.
+        """
+        # (Phi^T * Phi + Weight)^-1 * Phi^T * (Trajectory - Fx)
+        delta_U = self.solver_factor @ reference_trajectory.calculate_dif(
+            self.prediction_matrices.F_ndarray @ X_augmented)
+
+        return delta_U
+
+    def calculate_this_U(self, U, delta_U):
+        """
+        Calculates the new control input U based on the previous input and the computed delta_U.
+        Args:
+            U (np.ndarray): The previous control input.
+            delta_U (np.ndarray): The computed change in control input.
+        Returns:
+            np.ndarray: The updated control input U.
+        """
+        U = U + \
+            delta_U[:self.AUGMENTED_INPUT_SIZE, :]
+
+        return U
+
+    def compensate_X_Y_delay(self, X: np.ndarray, Y: np.ndarray):
+        """
+        Compensates for delays in the state and output vectors.
+        Args:
+            X (np.ndarray): The state vector.
+            Y (np.ndarray): The output vector.
+        Returns:
+            tuple: A tuple containing the compensated state vector and output vector.
+        """
+        if self.Number_of_Delay > 0:
+            Y_measured = Y
+
+            X = self.kalman_filter.get_x_hat_without_delay()
+            Y = self.kalman_filter.C @ X
+
+            self.Y_store.push(Y)
+            Y_diff = Y_measured - self.Y_store.get()
+
+            return X, (Y + Y_diff)
+        else:
+            return X, Y
+
+    def update(self, reference: np.ndarray, Y: np.ndarray):
+        """
+        Updates the MPC controller with the latest reference and output measurements.
+        Args:
+            reference (np.ndarray): The reference trajectory, which can be a single row vector or multiple row vectors.
+            Y (np.ndarray): The output measurement vector.
+        Returns:
+            np.ndarray: The updated control input U.
+        """
+        self.kalman_filter.predict_and_update_with_fixed_G(
+            self.U_latest, Y)
+        X = self.kalman_filter.x_hat
+        X_compensated, Y_compensated = self.compensate_X_Y_delay(X, Y)
+
+        delta_X = X_compensated - self.X_inner_model
+        X_augmented = np.vstack((delta_X, Y_compensated))
+
+        reference_trajectory = self.create_reference_trajectory(reference)
+
+        delta_U = self.solve(reference_trajectory, X_augmented)
+
+        self.U_latest = self.calculate_this_U(self.U_latest, delta_U)
+
+        self.X_inner_model = X_compensated
+
+        return self.U_latest
