@@ -319,7 +319,7 @@ class LTV_MPC_StateSpaceInitializer:
             for k in range(state_space.C.shape[0]):
                 for l in range(state_space.A.shape[1]):
                     code_text += \
-                        f"        F[{i * state_space.C.shape[0] + k}, {l}] = C_A_{i}_B[{k}, {l}]\n"
+                        f"        F[{i * state_space.C.shape[0] + k}, {l}] = C_A_{i + 1}[{k}, {l}]\n"
             code_text += "\n"
         code_text += "\n"
 
