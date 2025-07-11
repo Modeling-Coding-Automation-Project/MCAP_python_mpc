@@ -371,13 +371,11 @@ class LTV_MPC_StateSpaceInitializer:
         code_text += "    def " + LTV_MPC_PHI_F_UPDATER_FUNCTION_NAME + \
             "(parameters_struct) -> Tuple[np.ndarray, np.ndarray]:\n\n"
 
-        code_text += "        # EmbeddedIntegrator_Updater\n"
         code_text += "        A, B, C, _ = " + \
             EMBEDDED_INTEGRATOR_UPDATER_CLASS_NAME + \
             "." + EMBEDDED_INTEGRATOR_UPDATER_FUNCTION_NAME + \
             "(parameters_struct)\n\n"
 
-        code_text += "        # PredictionMatricesPhiF_Updater\n"
         code_text += "        Phi, F = " + \
             PREDICTION_MATRICES_PHI_F_UPDATER_CLASS_NAME + \
             "." + PREDICTION_MATRICES_PHI_F_UPDATER_FUNCTION_NAME + \
