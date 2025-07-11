@@ -1,7 +1,12 @@
 """
 File: linear_solver_utility.py
 
-This module provides the DU_U_Y_Limits class, which is a utility for managing and validating constraints on control increments (delta_U), control variables (U), and output variables (Y) in the context of Model Predictive Control (MPC) or similar optimization problems. The class supports initialization, validation, and dynamic management of lower and upper bounds for these variables, as well as tracking which constraints are active or inactive.
+This module provides the DU_U_Y_Limits class,
+which is a utility for managing and validating constraints on control increments (delta_U),
+control variables (U), and output variables (Y) in the context of Model Predictive Control (MPC)
+or similar optimization problems. The class supports initialization,
+validation, and dynamic management of lower and upper bounds for these variables,
+as well as tracking which constraints are active or inactive.
 """
 import numpy as np
 import sympy as sp
@@ -679,7 +684,7 @@ class LTI_MPC_QP_Solver:
             if Phi_factor_norm < self.tol:
                 print("[Warning] " +
                       f"Y[{i}] min cannot be constrained because Phi row is zero. " +
-                      f"Y[{i}] min constraint is no linger considered.")
+                      f"Y[{i}] min constraint is no longer considered.")
 
                 self.DU_U_Y_Limits.set_Y_min_inactive(i)
 
@@ -691,7 +696,7 @@ class LTI_MPC_QP_Solver:
 
                 print("[Warning] " +
                       f"Y[{i}] max cannot be constrained because Phi row is zero. " +
-                      f"Y[{i}] max constraint is no linger considered.")
+                      f"Y[{i}] max constraint is no longer considered.")
 
                 self.DU_U_Y_Limits.set_Y_max_inactive(i)
 

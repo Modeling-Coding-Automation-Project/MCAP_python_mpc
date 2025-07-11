@@ -1,10 +1,16 @@
 """
 File: state_space_utility.py
 
-This module provides utility classes and functions for symbolic and numeric manipulation of state-space models, particularly for Model Predictive Control (MPC) applications. It leverages sympy for symbolic computation and numpy for numerical operations, enabling the construction, augmentation, and conversion of state-space representations, as well as the generation of prediction matrices for MPC.
+This module provides utility classes and functions for symbolic
+and numeric manipulation of state-space models,
+particularly for Model Predictive Control (MPC) applications.
+It leverages sympy for symbolic computation and numpy for numerical operations,
+enabling the construction, augmentation, and conversion of state-space representations,
+as well as the generation of prediction matrices for MPC.
 """
 import numpy as np
 import sympy as sp
+import copy
 
 
 def symbolic_to_numeric_matrix(symbolic_matrix: sp.Matrix) -> np.ndarray:
@@ -44,23 +50,23 @@ class SymbolicStateSpace:
         self.INPUT_SIZE = B.shape[1]
         self.OUTPUT_SIZE = C.shape[0]
 
-        if not isinstance(A, sp.Matrix):
+        if not isinstance(A, sp.MatrixBase):
             self.A = sp.Matrix(A)
         else:
             self.A = A
 
-        if not isinstance(B, sp.Matrix):
+        if not isinstance(B, sp.MatrixBase):
             self.B = sp.Matrix(B)
         else:
             self.B = B
 
-        if not isinstance(C, sp.Matrix):
+        if not isinstance(C, sp.MatrixBase):
             self.C = sp.Matrix(C)
         else:
             self.C = C
 
         if D is not None:
-            if not isinstance(D, sp.Matrix):
+            if not isinstance(D, sp.MatrixBase):
                 self.D = sp.Matrix(D)
             else:
                 self.D = D
@@ -85,13 +91,13 @@ class StateSpaceEmbeddedIntegrator:
     """
 
     def __init__(self, state_space: SymbolicStateSpace):
-        if not isinstance(state_space.A, sp.Matrix):
+        if not isinstance(state_space.A, sp.MatrixBase):
             raise ValueError(
                 "A must be of type sympy matrix.")
-        if not isinstance(state_space.B, sp.Matrix):
+        if not isinstance(state_space.B, sp.MatrixBase):
             raise ValueError(
                 "B must be of type sympy matrix.")
-        if not isinstance(state_space.C, sp.Matrix):
+        if not isinstance(state_space.C, sp.MatrixBase):
             raise ValueError(
                 "C must be of type sympy matrix.")
 
@@ -166,20 +172,23 @@ class MPC_PredictionMatrices:
         self.A_symbolic = None
         self.B_symbolic = None
         self.C_symbolic = None
-        self.A_numeric = None
-        self.B_numeric = None
-        self.C_numeric = None
+        self.A_numeric_expression = None
+        self.B_numeric_expression = None
+        self.C_numeric_expression = None
         self.initialize_ABC()
 
         self._exponential_A_list = self._generate_exponential_A_list(
             self.A_symbolic)
 
-        self.F_symbolic = None
-        self.Phi_symbolic = None
-        self.F_numeric = None
-        self.Phi_numeric = None
+        self.F_numeric_expression = None
+        self.Phi_numeric_expression = None
+
+        self.F_ndarray = None
+        self.Phi_ndarray = None
 
         self.ABC_values = {}
+
+        self.Phi_F_updater_function = None
 
     def initialize_ABC(self):
         """
@@ -194,12 +203,12 @@ class MPC_PredictionMatrices:
         self.C_symbolic = sp.Matrix(self.OUTPUT_SIZE, self.STATE_SIZE,
                                     lambda i, j: sp.symbols(f'c{i+1}{j+1}'))
 
-        self.A_numeric = sp.Matrix(self.STATE_SIZE, self.STATE_SIZE,
-                                   lambda i, j: 0.0)
-        self.B_numeric = sp.Matrix(self.STATE_SIZE, self.INPUT_SIZE,
-                                   lambda i, j: 0.0)
-        self.C_numeric = sp.Matrix(self.OUTPUT_SIZE, self.STATE_SIZE,
-                                   lambda i, j: 0.0)
+        self.A_numeric_expression = sp.Matrix(self.STATE_SIZE, self.STATE_SIZE,
+                                              lambda i, j: 0.0)
+        self.B_numeric_expression = sp.Matrix(self.STATE_SIZE, self.INPUT_SIZE,
+                                              lambda i, j: 0.0)
+        self.C_numeric_expression = sp.Matrix(self.OUTPUT_SIZE, self.STATE_SIZE,
+                                              lambda i, j: 0.0)
 
     def generate_symbolic_substitution(self, A: np.ndarray, B: np.ndarray, C: np.ndarray):
         """
@@ -229,35 +238,19 @@ class MPC_PredictionMatrices:
                 self.ABC_values[symbol] = C[i, j]
 
     def substitute_ABC_symbolic(self, A: sp.Matrix, B: sp.Matrix, C: sp.Matrix):
-        """
-        Substitutes symbolic variables in the state-space matrices A, B, and C
-        with their corresponding numeric values.
-        Args:
-            A (sp.Matrix): State matrix.
-            B (sp.Matrix): Input matrix.
-            C (sp.Matrix): Output matrix.
-        """
-        self.A_symbolic = sp.Matrix(self.STATE_SIZE, self.STATE_SIZE,
-                                    lambda i, j: sp.symbols(f'a{i+1}{j+1}'))
-        for i in range(A.shape[0]):
-            for j in range(A.shape[1]):
-                self.A_symbolic[i, j].subs(f'a{i+1}{j+1}', A[i, j])
 
-        self.B_symbolic = sp.Matrix(self.STATE_SIZE, self.INPUT_SIZE,
-                                    lambda i, j: sp.symbols(f'b{i+1}{j+1}'))
-        for i in range(B.shape[0]):
-            for j in range(B.shape[1]):
-                self.B_symbolic[i, j].subs(f'b{i+1}{j+1}', B[i, j])
+        if not isinstance(A, sp.MatrixBase):
+            raise ValueError("A must be a sympy matrix.")
+        if not isinstance(B, sp.MatrixBase):
+            raise ValueError("B must be a sympy matrix.")
+        if not isinstance(C, sp.MatrixBase):
+            raise ValueError("C must be a sympy matrix.")
 
-        self.C_symbolic = sp.Matrix(self.OUTPUT_SIZE, self.STATE_SIZE,
-                                    lambda i, j: sp.symbols(f'c{i+1}{j+1}'))
-        for i in range(C.shape[0]):
-            for j in range(C.shape[1]):
-                self.C_symbolic[i, j].subs(f'c{i+1}{j+1}', C[i, j])
+        self.A_symbolic = A
+        self.B_symbolic = B
+        self.C_symbolic = C
 
-        self._generate_exponential_A_list(self.A_symbolic)
-
-    def substitute_ABC_numeric(self, A: np.ndarray, B: np.ndarray, C: np.ndarray):
+    def substitute_ABC_numeric_expression(self, A: np.ndarray, B: np.ndarray, C: np.ndarray):
         """
         Substitutes numeric values into the symbolic matrices A, B, and C.
         Args:
@@ -269,25 +262,25 @@ class MPC_PredictionMatrices:
                                     lambda i, j: sp.symbols(f'a{i+1}{j+1}'))
         for i in range(A.shape[0]):
             for j in range(A.shape[1]):
-                self.A_numeric[i, j] = self.A_symbolic[i, j].subs(
+                self.A_numeric_expression[i, j] = self.A_symbolic[i, j].subs(
                     self.ABC_values)
 
         self.B_symbolic = sp.Matrix(self.STATE_SIZE, self.INPUT_SIZE,
                                     lambda i, j: sp.symbols(f'b{i+1}{j+1}'))
         for i in range(B.shape[0]):
             for j in range(B.shape[1]):
-                self.B_numeric[i, j] = self.B_symbolic[i, j].subs(
+                self.B_numeric_expression[i, j] = self.B_symbolic[i, j].subs(
                     self.ABC_values)
 
         self.C_symbolic = sp.Matrix(self.OUTPUT_SIZE, self.STATE_SIZE,
                                     lambda i, j: sp.symbols(f'c{i+1}{j+1}'))
         for i in range(C.shape[0]):
             for j in range(C.shape[1]):
-                self.C_numeric[i, j] = self.C_symbolic[i, j].subs(
+                self.C_numeric_expression[i, j] = self.C_symbolic[i, j].subs(
                     self.ABC_values)
 
         self._exponential_A_list = self._generate_exponential_A_list(
-            self.A_numeric)
+            self.A_numeric_expression)
 
     def substitute_numeric(self, A: np.ndarray, B: np.ndarray, C: np.ndarray) -> tuple:
         """
@@ -306,73 +299,75 @@ class MPC_PredictionMatrices:
             C = symbolic_to_numeric_matrix(C)
 
         self.generate_symbolic_substitution(A, B, C)
-        self.substitute_ABC_numeric(A, B, C)
+        self.substitute_ABC_numeric_expression(A, B, C)
 
-        self.build_matrices(self.B_numeric, self.C_numeric)
+        self.build_matrices_numeric_expression(
+            self.B_numeric_expression, self.C_numeric_expression)
 
-        self.F_numeric = symbolic_to_numeric_matrix(
-            self.F_symbolic)
-        self.Phi_numeric = symbolic_to_numeric_matrix(
-            self.Phi_symbolic)
+        self.F_ndarray = symbolic_to_numeric_matrix(
+            self.F_numeric_expression)
+        self.Phi_ndarray = symbolic_to_numeric_matrix(
+            self.Phi_numeric_expression)
 
-    def build_matrices(self, B: sp.Matrix, C: sp.Matrix) -> tuple:
+    def build_matrices_numeric_expression(
+            self, B: sp.Matrix, C: sp.Matrix) -> tuple:
         """
         Builds the F and Phi matrices based on the symbolic state-space model.
         Args:
             B (sp.Matrix): Input matrix.
             C (sp.Matrix): Output matrix.
         """
-        self.F_symbolic = self._build_F(C)
-        self.Phi_symbolic = self._build_Phi(B, C)
+        self.F_numeric_expression = self._build_F_expression(C)
+        self.Phi_numeric_expression = self._build_Phi_expression(B, C)
+
+    def update_Phi_F_runtime(self, parameters_struct):
+        """
+        Updates the Phi and F matrices at runtime using the provided parameters.
+        This method calls the `Phi_F_updater_function` (if defined) with the given
+        `parameters_struct` to compute updated values for the Phi and F matrices.
+        The resulting matrices are then stored in `self.Phi_ndarray` and `self.F_ndarray`.
+        Args:
+            parameters_struct: A structure or object containing parameters required
+                by the `Phi_F_updater_function` to compute the updated matrices.
+        Returns:
+            None
+        """
+        if self.Phi_F_updater_function is not None:
+            Phi, F = self.Phi_F_updater_function(
+                parameters_struct=parameters_struct)
+
+            self.Phi_ndarray = Phi
+            self.F_ndarray = F
 
     def _generate_exponential_A_list(self, A: sp.Matrix):
-        """
-        Generates a list of matrices representing the exponential of the state matrix A
-        for each step in the prediction horizon.
-        Args:
-            A (sp.Matrix): State matrix.
-        Returns:
-            list: A list of matrices representing the exponential of A for each step.
-        """
+
         exponential_A_list = []
 
         for i in range(self.Np):
             if i == 0:
                 exponential_A_list.append(A)
             else:
-                exponential_A_list.append(
-                    exponential_A_list[i - 1] * A)
+                exponential_A_list.append(exponential_A_list[i - 1] * A)
 
         return exponential_A_list
 
-    def _build_F(self, C: sp.Matrix) -> sp.Matrix:
-        """
-        Builds the F matrix, which is used in the MPC prediction step.
-        Args:
-            C (sp.Matrix): Output matrix.
-        Returns:
-            sp.Matrix: The F matrix, which is a block matrix containing the outputs
-            of the system at each step in the prediction horizon.
-        """
-        F = sp.zeros(self.OUTPUT_SIZE * self.Np, self.STATE_SIZE)
+    def _build_F_expression(self, C: sp.Matrix) -> sp.Matrix:
+
+        F_expression = sp.zeros(self.OUTPUT_SIZE * self.Np, self.STATE_SIZE)
+
         for i in range(self.Np):
             # C A^{i+1}
-            F[i * self.OUTPUT_SIZE:(i + 1) *
-              self.OUTPUT_SIZE, :] = C * self._exponential_A_list[i]
-        return F
+            F = C * self._exponential_A_list[i]
 
-    def _build_Phi(self, B: sp.Matrix, C: sp.Matrix) -> sp.Matrix:
-        """
-        Builds the Phi matrix, which is used in the MPC control step.
-        Args:
-            B (sp.Matrix): Input matrix.
-            C (sp.Matrix): Output matrix.
-        Returns:
-            sp.Matrix: The Phi matrix, which is a block matrix containing the
-            contributions of the inputs to the outputs at each step in the prediction horizon.
-        """
-        Phi = sp.zeros(self.OUTPUT_SIZE * self.Np,
-                       self.INPUT_SIZE * self.Nc)
+            F_expression[i * self.OUTPUT_SIZE:(i + 1) *
+                         self.OUTPUT_SIZE, :] = F
+
+        return F_expression
+
+    def _build_Phi_expression(self, B: sp.Matrix, C: sp.Matrix) -> sp.Matrix:
+
+        Phi_expression = sp.zeros(self.OUTPUT_SIZE * self.Np,
+                                  self.INPUT_SIZE * self.Nc)
 
         for i in range(self.Nc):
             for j in range(i, self.Np):
@@ -380,12 +375,15 @@ class MPC_PredictionMatrices:
                 if exponent == 0:
                     blok = C * B
                 else:
-                    blok = C * self._exponential_A_list[exponent - 1] * B
+                    blok = C * \
+                        self._exponential_A_list[exponent - 1] * B
 
                 r0, c0 = j * self.OUTPUT_SIZE, i * self.INPUT_SIZE
-                Phi[r0:r0 + self.OUTPUT_SIZE,
-                    c0:c0 + self.INPUT_SIZE] = blok
-        return Phi
+
+                Phi_expression[r0:r0 + self.OUTPUT_SIZE,
+                               c0:c0 + self.INPUT_SIZE] = blok
+
+        return Phi_expression
 
 
 class MPC_ReferenceTrajectory:
