@@ -26,7 +26,52 @@ from python_mpc.linear_mpc import LTV_MPC_NoConstraints
 from sample.simulation_manager.visualize.simulation_plotter import SimulationPlotter
 from sample.simulation_manager.signal_edit.sampler import PulseGenerator
 
-from mpc_utility.state_space_utility_deploy import StateSpaceUpdaterDeploy
+from mpc_utility.state_space_utility_deploy import MPC_STATE_SPACE_UPDATER_FILE_NAME_NO_EXTENSION
+from mpc_utility.state_space_utility_deploy import MPC_STATE_SPACE_UPDATER_CLASS_NAME
+from mpc_utility.state_space_utility_deploy import MPC_STATE_SPACE_UPDATER_FUNCTION_NAME
+
+
+class StateSpaceUpdater:
+    @staticmethod
+    def update(parameters):
+        """
+        Updates and returns the state-space matrices (A, B, C, D)
+          for the servo motor model using the provided parameters.
+
+        You need to run LTV_MPC_NoConstraints initialization
+          before calling this function to ensure that the Python code file exists.
+
+        This function dynamically imports a specified class and
+          function to compute the state-space matrices based on the given parameters.
+        It executes the import and function call at runtime,
+          allowing for flexible updates of the model.
+
+        Args:
+            parameters (struct): parameters
+              required by the state-space updater function.
+
+        Returns:
+            tuple: A tuple containing the updated state-space matrices (A, B, C, D).
+        """
+
+        local_vars = {"parameters": parameters}
+
+        exe_code = (
+            f"from {MPC_STATE_SPACE_UPDATER_FILE_NAME_NO_EXTENSION} import " +
+            MPC_STATE_SPACE_UPDATER_CLASS_NAME + "\n"
+            "A, B, C, D = " +
+            MPC_STATE_SPACE_UPDATER_CLASS_NAME +
+            f".{MPC_STATE_SPACE_UPDATER_FUNCTION_NAME}(parameters)\n"
+        )
+
+        exec(exe_code, globals(), local_vars)
+
+        A = local_vars["A"]
+        B = local_vars["B"]
+        C = local_vars["C"]
+        D = local_vars["D"]
+
+        return A, B, C, D
 
 
 class ServoMotorParameters:
@@ -163,9 +208,7 @@ def main():
 
     # real plant model
     # You can change the characteristic with changing the A, B, C matrices
-    A = ltv_mpc.kalman_filter.A
-    B = ltv_mpc.kalman_filter.B
-    C = ltv_mpc.kalman_filter.C
+    A, B, C, _ = StateSpaceUpdater.update(parameters)
 
     X = np.array([[0.0],
                   [0.0],
