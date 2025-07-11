@@ -19,6 +19,7 @@ import math
 import numpy as np
 import sympy as sp
 import control
+from dataclasses import dataclass
 
 from mpc_utility.state_space_utility import SymbolicStateSpace
 from python_mpc.linear_mpc import LTV_MPC_NoConstraints
@@ -74,22 +75,23 @@ class StateSpaceUpdater:
         return A, B, C, D
 
 
+@dataclass
 class ServoMotorParameters:
-    Lshaft = 1.0                        # Length of the shaft
-    dshaft = 0.02                       # Diameter of the shaft
+    Lshaft: float = 1.0         # Length of the shaft
+    dshaft: float = 0.02        # Diameter of the shaft
     # Density of the shaft material (carbon steel)
-    shaftrho = 7850.0
-    G = 81500.0 * 1.0e6                 # Shear modulus
+    shaftrho: float = 7850.0
+    G: float = 81500.0 * 1.0e6  # Shear modulus
 
-    Mmotor = 100.0                      # Mass of the rotor
-    Rmotor = 0.1                        # Radius of the rotor
+    Mmotor: float = 100.0       # Mass of the rotor
+    Rmotor: float = 0.1         # Radius of the rotor
 
     # Viscous friction coefficient of the rotor (A CASO)
-    Bmotor = 0.1
-    R = 20.0                            # Resistance of the contactor
+    Bmotor: float = 0.1
+    R: float = 20.0             # Resistance of the contactor
 
-    Kt = 10.0       # Motor constant
-    Bload = 25.0    # Load viscous friction coefficient
+    Kt: float = 10.0            # Motor constant
+    Bload: float = 25.0         # Load viscous friction coefficient
 
 
 def create_plant_model_ABCD():

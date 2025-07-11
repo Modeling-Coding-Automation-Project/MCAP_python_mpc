@@ -12,6 +12,7 @@ and quadratic programming-based constraint handling.
 """
 import numpy as np
 import sympy as sp
+from dataclasses import is_dataclass
 
 from mpc_utility.state_space_utility import SymbolicStateSpace
 from mpc_utility.state_space_utility import StateSpaceEmbeddedIntegrator
@@ -404,6 +405,10 @@ class LTV_MPC_NoConstraints:
         if (Np < self.Number_of_Delay):
             raise ValueError(
                 "Prediction horizon Np must be greater than the number of delays.")
+
+        if not is_dataclass(parameters_struct):
+            raise ValueError(
+                "parameters_struct must be a dataclass instance.")
 
         self.parameters_struct = parameters_struct
 
