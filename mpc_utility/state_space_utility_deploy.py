@@ -15,7 +15,7 @@ MPC_STATE_SPACE_UPDATER_FILE_NAME = "mpc_state_space_updater.py"
 MPC_EMBEDDED_INTEGRATOR_UPDATER_FILE_NAME = "mpc_embedded_integrator_state_space_updater.py"
 
 MPC_STATESPACE_UPDATER_CLASS_NAME = "MPC_StateSpace_Updater"
-EMBEDDED_INTEGRATOR_UPDATER_CLASS_NAME = "EmbeddedIntegratorABC_Updater"
+EMBEDDED_INTEGRATOR_UPDATER_CLASS_NAME = "EmbeddedIntegrator_Updater"
 A_UPDATER_FUNCTION_NAME = "update_A"
 B_UPDATER_FUNCTION_NAME = "update_B"
 C_UPDATER_FUNCTION_NAME = "update_C"
