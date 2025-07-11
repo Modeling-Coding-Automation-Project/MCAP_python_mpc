@@ -14,7 +14,7 @@ from mpc_utility.state_space_utility import StateSpaceEmbeddedIntegrator
 MPC_STATE_SPACE_UPDATER_FILE_NAME = "mpc_state_space_updater.py"
 MPC_EMBEDDED_INTEGRATOR_UPDATER_FILE_NAME = "mpc_embedded_integrator_state_space_updater.py"
 
-ABCD_UPDATER_CLASS_NAME = "ABCD_Updater"
+MPC_STATESPACE_UPDATER_CLASS_NAME = "MPC_StateSpace_Updater"
 EMBEDDED_INTEGRATOR_UPDATER_CLASS_NAME = "EmbeddedIntegratorABC_Updater"
 A_UPDATER_FUNCTION_NAME = "update_A"
 B_UPDATER_FUNCTION_NAME = "update_B"
@@ -184,7 +184,7 @@ class StateSpaceUpdaterDeploy:
             B: sp.Matrix = None,
             C: sp.Matrix = None,
             D: sp.Matrix = None,
-            class_name: str = ABCD_UPDATER_CLASS_NAME,
+            class_name: str = MPC_STATESPACE_UPDATER_CLASS_NAME,
             file_name: str = MPC_STATE_SPACE_UPDATER_FILE_NAME):
 
         code_text = StateSpaceUpdaterDeploy.create_ABCD_update_code(
@@ -207,7 +207,7 @@ class LTV_MPC_StateSpaceInitializer:
                          file_name: str = MPC_STATE_SPACE_UPDATER_FILE_NAME):
         StateSpaceUpdaterDeploy.create_write_ABCD_update_code(
             argument_struct=parameters_struct,
-            A=A, B=B, C=C, D=D, class_name=ABCD_UPDATER_CLASS_NAME,
+            A=A, B=B, C=C, D=D, class_name=MPC_STATESPACE_UPDATER_CLASS_NAME,
             file_name=file_name)
 
         self.ABCD_sympy_function_generated = True
@@ -217,8 +217,10 @@ class LTV_MPC_StateSpaceInitializer:
         file_name_no_extension = os.path.splitext(file_name)[0]
 
         exe_code = (
-            f"from {file_name_no_extension} import ABCD_Updater\n"
-            "A_numeric, B_numeric, C_numeric, D_numeric = ABCD_Updater.update(parameters_struct)\n"
+            f"from {file_name_no_extension} import " +
+            MPC_STATESPACE_UPDATER_CLASS_NAME + "\n"
+            "A_numeric, B_numeric, C_numeric, D_numeric = " +
+            MPC_STATESPACE_UPDATER_CLASS_NAME + ".update(parameters_struct)\n"
         )
 
         exec(exe_code, globals(), local_vars)

@@ -262,7 +262,7 @@ class MPC_PredictionMatrices:
 
         self.substitute_ABC_symbolic(A, B, C)
 
-        self.build_matrices_calculation(self.B_symbolic, self.C_symbolic)
+        # self.build_matrices_calculation(self.B_symbolic, self.C_symbolic)
 
     def substitute_ABC_numeric_expression(self, A: np.ndarray, B: np.ndarray, C: np.ndarray):
         """
