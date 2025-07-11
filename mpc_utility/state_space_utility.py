@@ -188,6 +188,8 @@ class MPC_PredictionMatrices:
 
         self.ABC_values = {}
 
+        self.Phi_F_updater_function = None
+
     def initialize_ABC(self):
         """
         Initializes symbolic matrices A, B, and C with symbolic variables.
@@ -317,6 +319,25 @@ class MPC_PredictionMatrices:
         """
         self.F_numeric_expression = self._build_F_expression(C)
         self.Phi_numeric_expression = self._build_Phi_expression(B, C)
+
+    def update_Phi_F_runtime(self, parameters_struct):
+        """
+        Updates the Phi and F matrices at runtime using the provided parameters.
+        This method calls the `Phi_F_updater_function` (if defined) with the given
+        `parameters_struct` to compute updated values for the Phi and F matrices.
+        The resulting matrices are then stored in `self.Phi_ndarray` and `self.F_ndarray`.
+        Args:
+            parameters_struct: A structure or object containing parameters required
+                by the `Phi_F_updater_function` to compute the updated matrices.
+        Returns:
+            None
+        """
+        if self.Phi_F_updater_function is not None:
+            Phi, F = self.Phi_F_updater_function(
+                parameters_struct=parameters_struct)
+
+            self.Phi_ndarray = Phi
+            self.F_ndarray = F
 
     def _generate_exponential_A_list(self, A: sp.Matrix):
 

@@ -4,26 +4,29 @@ sys.path.append(os.getcwd())
 
 import numpy as np
 import sympy as sp
-import inspect
-import ast
-import astor
+from typing import Tuple
+import importlib
 
 from external_libraries.MCAP_python_control.python_control.control_deploy import ExpressionDeploy
 from mpc_utility.state_space_utility import StateSpaceEmbeddedIntegrator
 
 MPC_STATE_SPACE_UPDATER_FILE_NAME = "mpc_state_space_updater.py"
-MPC_EMBEDDED_INTEGRATOR_UPDATER_FILE_NAME = "mpc_embedded_integrator_state_space_updater.py"
+EMBEDDED_INTEGRATOR_UPDATER_FILE_NAME = "mpc_embedded_integrator_state_space_updater.py"
 PREDICTION_MATRICES_PHI_F_UPDATER_FILE_NAME = "prediction_matrices_phi_f_updater.py"
+LTV_MPC_PHI_F_UPDATER_FILE_NAME = "ltv_mpc_phi_f_updater.py"
 
 MPC_STATE_SPACE_UPDATER_CLASS_NAME = "MPC_StateSpace_Updater"
 EMBEDDED_INTEGRATOR_UPDATER_CLASS_NAME = "EmbeddedIntegrator_Updater"
 PREDICTION_MATRICES_PHI_F_UPDATER_CLASS_NAME = "PredictionMatricesPhiF_Updater"
+LTV_MPC_PHI_F_UPDATER_CLASS_NAME = "LTV_MPC_Phi_F_Updater"
 
 A_UPDATER_FUNCTION_NAME = "update_A"
 B_UPDATER_FUNCTION_NAME = "update_B"
 C_UPDATER_FUNCTION_NAME = "update_C"
 D_UPDATER_FUNCTION_NAME = "update_D"
-PHI_F_UPDATER_FUNCTION_NAME = "update_Phi_F"
+EMBEDDED_INTEGRATOR_UPDATER_FUNCTION_NAME = "update"
+PREDICTION_MATRICES_PHI_F_UPDATER_FUNCTION_NAME = "update_Phi_F"
+LTV_MPC_PHI_F_UPDATER_FUNCTION_NAME = "calculate_Phi_F"
 
 A_UPDATER_CLASS_NAME = "A_Updater"
 B_UPDATER_CLASS_NAME = "B_Updater"
@@ -202,16 +205,21 @@ class StateSpaceUpdaterDeploy:
 class LTV_MPC_StateSpaceInitializer:
     def __init__(self):
         self.MPC_STATE_SPACE_UPDATER_FILE_NAME = MPC_STATE_SPACE_UPDATER_FILE_NAME
-        self.MPC_EMBEDDED_INTEGRATOR_UPDATER_FILE_NAME = MPC_EMBEDDED_INTEGRATOR_UPDATER_FILE_NAME
+        self.EMBEDDED_INTEGRATOR_UPDATER_FILE_NAME = EMBEDDED_INTEGRATOR_UPDATER_FILE_NAME
         self.PREDICTION_MATRICES_PHI_F_UPDATER_FILE_NAME = PREDICTION_MATRICES_PHI_F_UPDATER_FILE_NAME
+        self.LTV_MPC_PHI_F_UPDATER_FILE_NAME = LTV_MPC_PHI_F_UPDATER_FILE_NAME
 
         self.MPC_STATE_SPACE_UPDATER_CLASS_NAME = MPC_STATE_SPACE_UPDATER_CLASS_NAME
         self.EMBEDDED_INTEGRATOR_UPDATER_CLASS_NAME = EMBEDDED_INTEGRATOR_UPDATER_CLASS_NAME
         self.PREDICTION_MATRICES_PHI_F_UPDATER_CLASS_NAME = PREDICTION_MATRICES_PHI_F_UPDATER_CLASS_NAME
+        self.LTV_MPC_PHI_F_UPDATER_CLASS_NAME = LTV_MPC_PHI_F_UPDATER_CLASS_NAME
 
         self.ABCD_sympy_function_generated = False
         self.embedded_integrator_ABC_function_generated = False
         self.Phi_F_function_generated = False
+        self.LTV_MPC_Phi_F_function_generated = False
+
+        self.LTV_MPC_Phi_F_updater_function = None
 
     def get_generate_initial_MPC_StateSpace(self, parameters_struct,
                                             A: sp.Matrix = None, B: sp.Matrix = None,
@@ -247,7 +255,7 @@ class LTV_MPC_StateSpaceInitializer:
     def generate_initial_embedded_integrator(
             self, parameters_struct,
             state_space: StateSpaceEmbeddedIntegrator = None,
-            file_name: str = MPC_EMBEDDED_INTEGRATOR_UPDATER_FILE_NAME):
+            file_name: str = EMBEDDED_INTEGRATOR_UPDATER_FILE_NAME):
 
         if state_space is None:
             raise ValueError("State space must be provided.")
@@ -282,9 +290,10 @@ class LTV_MPC_StateSpaceInitializer:
         code_text += "from typing import Tuple\n"
         code_text += "import numpy as np\n\n\n"
 
+        # class for calculate Phi and F
         code_text += "class " + PREDICTION_MATRICES_PHI_F_UPDATER_CLASS_NAME + ":\n\n"
         code_text += "    @staticmethod\n"
-        code_text += "    def " + PHI_F_UPDATER_FUNCTION_NAME + \
+        code_text += "    def " + PREDICTION_MATRICES_PHI_F_UPDATER_FUNCTION_NAME + \
             "(A: np.ndarray, B: np.ndarray, C: np.ndarray) -> " + \
             f"Tuple[Tuple[{Phi_shape[0]}, {Phi_shape[1]}], Tuple[{F_shape[0]}, {F_shape[1]}]]:\n\n"
 
@@ -337,3 +346,55 @@ class LTV_MPC_StateSpaceInitializer:
             f.write(code_text)
 
         self.Phi_F_function_generated = True
+
+    def generate_LTV_MPC_Phi_F_Updater(
+            self, file_name: str = LTV_MPC_PHI_F_UPDATER_FILE_NAME):
+
+        code_text = ""
+        code_text += "from typing import Tuple\n"
+        code_text += "import numpy as np\n\n"
+
+        file_name_no_extension = os.path.splitext(
+            EMBEDDED_INTEGRATOR_UPDATER_FILE_NAME)[0]
+        code_text += "from " + file_name_no_extension + " import " + \
+            EMBEDDED_INTEGRATOR_UPDATER_CLASS_NAME + "\n"
+
+        file_name_no_extension = os.path.splitext(
+            PREDICTION_MATRICES_PHI_F_UPDATER_FILE_NAME)[0]
+
+        code_text += "from " + file_name_no_extension + " import " + \
+            PREDICTION_MATRICES_PHI_F_UPDATER_CLASS_NAME + "\n\n"
+
+        # class for update Phi and F from parameters
+        code_text += "class " + LTV_MPC_PHI_F_UPDATER_CLASS_NAME + ":\n\n"
+        code_text += "    @staticmethod\n"
+        code_text += "    def " + LTV_MPC_PHI_F_UPDATER_FUNCTION_NAME + \
+            "(parameters_struct) -> Tuple[np.ndarray, np.ndarray]:\n\n"
+
+        code_text += "        # EmbeddedIntegrator_Updater\n"
+        code_text += "        A, B, C, _ = " + \
+            EMBEDDED_INTEGRATOR_UPDATER_CLASS_NAME + \
+            "." + EMBEDDED_INTEGRATOR_UPDATER_FUNCTION_NAME + \
+            "(parameters_struct)\n\n"
+
+        code_text += "        # PredictionMatricesPhiF_Updater\n"
+        code_text += "        Phi, F = " + \
+            PREDICTION_MATRICES_PHI_F_UPDATER_CLASS_NAME + \
+            "." + PREDICTION_MATRICES_PHI_F_UPDATER_FUNCTION_NAME + \
+            "(A, B, C)\n\n"
+
+        code_text += "        return Phi, F\n\n"
+
+        with open(file_name, "w", encoding="utf-8") as f:
+            f.write(code_text)
+
+        module_name = os.path.splitext(os.path.basename(file_name))[0]
+        module = importlib.import_module(module_name)
+
+        LTV_MPC_Phi_F_Updater = getattr(
+            module, LTV_MPC_PHI_F_UPDATER_CLASS_NAME)
+
+        self.LTV_MPC_Phi_F_updater_function = getattr(
+            LTV_MPC_Phi_F_Updater, LTV_MPC_PHI_F_UPDATER_FUNCTION_NAME)
+
+        self.LTV_MPC_Phi_F_function_generated = True
