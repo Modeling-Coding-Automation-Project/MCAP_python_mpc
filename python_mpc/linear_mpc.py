@@ -358,7 +358,7 @@ class LTV_MPC_NoConstraints:
             raise ValueError(
                 "the augmented state space output must have the same size of state_space.C.")
 
-        self.state_space_initializer.get_initial_embedded_integrator(
+        self.state_space_initializer.generate_initial_embedded_integrator(
             parameters_struct=self.parameters_struct,
             state_space=self.augmented_ss)
 
@@ -374,7 +374,7 @@ class LTV_MPC_NoConstraints:
 
         self.Weight_U_Nc = self.update_weight(Weight_U)
 
-        self.state_space_initializer.get_prediction_matrices_phi_f(
+        self.state_space_initializer.generate_prediction_matrices_phi_f(
             Np=Np,
             Nc=Nc,
             state_space=self.augmented_ss)
@@ -400,7 +400,7 @@ class LTV_MPC_NoConstraints:
         if R_kf is None:
             R_kf = np.eye(state_space.C.shape[0])
 
-        A, B, C, _ = self.state_space_initializer.get_initial_MPC_StateSpace(
+        A, B, C, _ = self.state_space_initializer.get_generate_initial_MPC_StateSpace(
             parameters_struct, state_space.A, state_space.B, state_space.C)
 
         lkf = LinearKalmanFilter(
