@@ -24,6 +24,7 @@ A_UPDATER_FUNCTION_NAME = "update_A"
 B_UPDATER_FUNCTION_NAME = "update_B"
 C_UPDATER_FUNCTION_NAME = "update_C"
 D_UPDATER_FUNCTION_NAME = "update_D"
+MPC_STATE_SPACE_UPDATER_FUNCTION_NAME = "update"
 EMBEDDED_INTEGRATOR_UPDATER_FUNCTION_NAME = "update"
 PREDICTION_MATRICES_PHI_F_UPDATER_FUNCTION_NAME = "update_Phi_F"
 LTV_MPC_PHI_F_UPDATER_FUNCTION_NAME = "calculate_Phi_F"
@@ -79,7 +80,7 @@ class StateSpaceUpdaterDeploy:
 
         code_text += "class " + updater_class_name + ":\n\n"
         code_text += "    @staticmethod\n    "
-        code_text += "def update("
+        code_text += f"def {MPC_STATE_SPACE_UPDATER_FUNCTION_NAME}("
 
         code_text += StateSpaceUpdaterDeploy.write_param_names_argument(
             param_names)
@@ -150,32 +151,32 @@ class StateSpaceUpdaterDeploy:
         # ABCD class
         code_text += "class " + class_name + ":\n\n"
         code_text += "    @staticmethod\n"
-        code_text += "    def update(parameters):\n\n"
+        code_text += f"    def {MPC_STATE_SPACE_UPDATER_FUNCTION_NAME}(parameters):\n\n"
 
         for param_name in param_names:
             code_text += f"        {param_name} = parameters.{param_name}\n"
 
         code_text += "\n"
         if A is not None:
-            code_text += f"        A = {A_UPDATER_CLASS_NAME}.update" + \
+            code_text += f"        A = {A_UPDATER_CLASS_NAME}.{MPC_STATE_SPACE_UPDATER_FUNCTION_NAME}" + \
                 f"({StateSpaceUpdaterDeploy.write_param_names_argument(param_names)})\n\n"
         else:
             code_text += "        A = None\n\n"
 
         if B is not None:
-            code_text += f"        B = {B_UPDATER_CLASS_NAME}.update" + \
+            code_text += f"        B = {B_UPDATER_CLASS_NAME}.{MPC_STATE_SPACE_UPDATER_FUNCTION_NAME}" + \
                 f"({StateSpaceUpdaterDeploy.write_param_names_argument(param_names)})\n\n"
         else:
             code_text += "        B = None\n\n"
 
         if C is not None:
-            code_text += f"        C = {C_UPDATER_CLASS_NAME}.update" + \
+            code_text += f"        C = {C_UPDATER_CLASS_NAME}.{MPC_STATE_SPACE_UPDATER_FUNCTION_NAME}" + \
                 f"({StateSpaceUpdaterDeploy.write_param_names_argument(param_names)})\n\n"
         else:
             code_text += "        C = None\n\n"
 
         if D is not None:
-            code_text += f"        D = {D_UPDATER_CLASS_NAME}.update" + \
+            code_text += f"        D = {D_UPDATER_CLASS_NAME}.{MPC_STATE_SPACE_UPDATER_FUNCTION_NAME}" + \
                 f"({StateSpaceUpdaterDeploy.write_param_names_argument(param_names)})\n\n"
         else:
             code_text += "        D = None\n\n"
@@ -219,6 +220,7 @@ class LTV_MPC_StateSpaceInitializer:
         self.Phi_F_function_generated = False
         self.LTV_MPC_Phi_F_function_generated = False
 
+        self.mpc_state_space_updater_function = None
         self.LTV_MPC_Phi_F_updater_function = None
 
     def get_generate_initial_MPC_StateSpace(self, parameters_struct,
@@ -250,7 +252,19 @@ class LTV_MPC_StateSpaceInitializer:
 
         self.ABCD_sympy_function_generated = True
 
+        module_name = os.path.splitext(os.path.basename(file_name))[0]
+        module = importlib.import_module(module_name)
+
+        state_space_updater = getattr(
+            module, MPC_STATE_SPACE_UPDATER_CLASS_NAME)
+
+        self.mpc_state_space_updater_function = getattr(
+            state_space_updater, MPC_STATE_SPACE_UPDATER_FUNCTION_NAME)
+
         return A_numeric, B_numeric, C_numeric, D_numeric
+
+    def update_mpc_state_space_runtime(self, parameters_struct):
+        return self.mpc_state_space_updater_function(parameters_struct)
 
     def generate_initial_embedded_integrator(
             self, parameters_struct,

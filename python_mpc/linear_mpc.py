@@ -533,17 +533,49 @@ class LTV_MPC_NoConstraints:
             self.kalman_filter, self.Number_of_Delay,
             self.Y_store, X, Y)
 
-    def update(self, reference: np.ndarray, Y: np.ndarray):
+    def update_parameters(self, parameters_struct):
         """
-        Updates the MPC controller with the latest reference and output measurements.
+        Updates the internal parameters of the MPC controller at runtime.
+
+        This method updates the state-space matrices (A, B, C) of the Kalman filter
+        and the prediction matrices using the provided parameters structure. It is
+        intended to be called when model or controller parameters need to be changed
+        during operation.
+
         Args:
-            reference (np.ndarray): The reference trajectory,
-              which can be a single row vector or multiple row vectors.
-            Y (np.ndarray): The output measurement vector.
-        Returns:
-            np.ndarray: The updated control input U.
+            parameters_struct: An object or dictionary containing the updated
+                parameters required for the state-space and prediction matrices.
         """
-        self.kalman_filter.predict_and_update_with_fixed_G(
+        self.kalman_filter.A, \
+            self.kalman_filter.B, \
+            self.kalman_filter.C, _ = \
+            self.state_space_initializer.update_mpc_state_space_runtime(
+                parameters_struct)
+
+        self.prediction_matrices.update_Phi_F_runtime(
+            parameters_struct)
+
+    def update_manipulation(self, reference: np.ndarray, Y: np.ndarray):
+        """
+        Updates the control manipulation input based on the current reference and measured output.
+
+        This method performs the following steps:
+        1. Updates the internal Kalman filter state using the latest control input and measured output.
+        2. Compensates for any delays in the state and output.
+        3. Computes the difference between the compensated state and the internal model state.
+        4. Augments the state with the compensated output.
+        5. Generates a reference trajectory for the controller.
+        6. Solves the control optimization problem to obtain the change in control input.
+        7. Updates the latest control input and the internal model state.
+
+        Args:
+            reference (np.ndarray): The desired reference trajectory or setpoint for the system.
+            Y (np.ndarray): The latest measured output from the system.
+
+        Returns:
+            np.ndarray: The updated control input to be applied to the system.
+        """
+        self.kalman_filter.predict_and_update(
             self.U_latest, Y)
         X = self.kalman_filter.x_hat
         X_compensated, Y_compensated = self.compensate_X_Y_delay(X, Y)
