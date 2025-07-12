@@ -33,8 +33,8 @@ C_UPDATER_FUNCTION_NAME = "update_C"
 D_UPDATER_FUNCTION_NAME = "update_D"
 MPC_STATE_SPACE_UPDATER_FUNCTION_NAME = "update"
 EMBEDDED_INTEGRATOR_UPDATER_FUNCTION_NAME = "update"
-PREDICTION_MATRICES_PHI_F_UPDATER_FUNCTION_NAME = "update_Phi_F"
-LTV_MPC_PHI_F_UPDATER_FUNCTION_NAME = "calculate_Phi_F"
+PREDICTION_MATRICES_PHI_F_UPDATER_FUNCTION_NAME = "update"
+LTV_MPC_PHI_F_UPDATER_FUNCTION_NAME = "update"
 
 A_UPDATER_CLASS_NAME = "A_Updater"
 B_UPDATER_CLASS_NAME = "B_Updater"
@@ -317,7 +317,13 @@ class StateSpaceUpdaterDeploy:
 
 class LTV_MPC_StateSpaceInitializer:
     def __init__(self):
-        self.ABCD_sympy_function_generated = False
+
+        self.mpc_state_space_updater_file_name = ""
+        self.embedded_integrator_updater_file_name = ""
+        self.prediction_matrices_phi_f_updater_file_name = ""
+        self.LTV_MPC_Phi_F_updater_file_name = ""
+
+        self.mpc_state_space_updater_generated = False
         self.embedded_integrator_ABC_function_generated = False
         self.Phi_F_function_generated = False
         self.LTV_MPC_Phi_F_function_generated = False
@@ -380,7 +386,8 @@ class LTV_MPC_StateSpaceInitializer:
         C_numeric = local_vars["C_numeric"]
         D_numeric = local_vars["D_numeric"]
 
-        self.ABCD_sympy_function_generated = True
+        self.mpc_state_space_updater_file_name = file_name
+        self.mpc_state_space_updater_generated = True
 
         module_name = os.path.splitext(os.path.basename(file_name))[0]
         module = importlib.import_module(module_name)
@@ -451,6 +458,7 @@ class LTV_MPC_StateSpaceInitializer:
             class_name=EMBEDDED_INTEGRATOR_UPDATER_CLASS_NAME,
             file_name=file_name)
 
+        self.embedded_integrator_updater_file_name = file_name
         self.embedded_integrator_ABC_function_generated = True
 
     def generate_prediction_matrices_phi_f(
@@ -553,6 +561,7 @@ class LTV_MPC_StateSpaceInitializer:
         with open(file_name, "w", encoding="utf-8") as f:
             f.write(code_text)
 
+        self.prediction_matrices_phi_f_updater_file_name = file_name
         self.Phi_F_function_generated = True
 
     def generate_LTV_MPC_Phi_F_Updater(
@@ -636,4 +645,5 @@ class LTV_MPC_StateSpaceInitializer:
         self.LTV_MPC_Phi_F_updater_function = getattr(
             LTV_MPC_Phi_F_Updater, LTV_MPC_PHI_F_UPDATER_FUNCTION_NAME)
 
+        self.LTV_MPC_Phi_F_updater_file_name = file_name
         self.LTV_MPC_Phi_F_function_generated = True
