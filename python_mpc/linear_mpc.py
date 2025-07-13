@@ -605,3 +605,51 @@ class LTV_MPC_NoConstraints:
         self.X_inner_model = X_compensated
 
         return self.U_latest
+
+
+class LTV_MPC(LTV_MPC_NoConstraints):
+
+    def __init__(self, state_space: SymbolicStateSpace,
+                 parameters_struct, Np: int, Nc: int,
+                 Weight_U: np.ndarray, Weight_Y: np.ndarray,
+                 Q_kf: np.ndarray = None, R_kf: np.ndarray = None,
+                 is_ref_trajectory: bool = False,
+                 delta_U_min: np.ndarray = None, delta_U_max: np.ndarray = None,
+                 U_min: np.ndarray = None, U_max: np.ndarray = None,
+                 Y_min: np.ndarray = None, Y_max: np.ndarray = None):
+
+        super().__init__(state_space, parameters_struct, Np, Nc, Weight_U, Weight_Y,
+                         Q_kf, R_kf, is_ref_trajectory)
+
+        delta_U_Nc = np.zeros((self.solver_factor.shape[0], 1))
+
+        self.qp_solver = LTI_MPC_QP_Solver(
+            number_of_variables=self.AUGMENTED_INPUT_SIZE * self.Nc,
+            output_size=self.AUGMENTED_OUTPUT_SIZE,
+            U=self.U_latest,
+            X_augmented=np.vstack(
+                (self.X_inner_model, self.Y_store.get())),
+            Phi=self.prediction_matrices.Phi_ndarray,
+            F=self.prediction_matrices.F_ndarray,
+            Weight_U_Nc=self.Weight_U_Nc,
+            delta_U_Nc=delta_U_Nc,
+            delta_U_min=delta_U_min, delta_U_max=delta_U_max,
+            U_min=U_min, U_max=U_max,
+            Y_min=Y_min, Y_max=Y_max)
+
+    def solve(self, reference_trajectory: MPC_ReferenceTrajectory,
+              X_augmented: np.ndarray):
+
+        self.qp_solver.update_constraints(
+            U=self.U_latest,
+            X_augmented=X_augmented,
+            Phi=self.prediction_matrices.Phi_ndarray,
+            F=self.prediction_matrices.F_ndarray)
+
+        delta_U = self.qp_solver.solve(
+            Phi=self.prediction_matrices.Phi_ndarray,
+            F=self.prediction_matrices.F_ndarray,
+            reference_trajectory=reference_trajectory,
+            X_augmented=X_augmented)
+
+        return delta_U
