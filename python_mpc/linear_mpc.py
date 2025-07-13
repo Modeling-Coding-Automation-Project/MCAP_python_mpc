@@ -608,6 +608,13 @@ class LTV_MPC_NoConstraints:
 
 
 class LTV_MPC(LTV_MPC_NoConstraints):
+    """
+    Linear Time-Varying Model Predictive Controller (LTV_MPC) with constraints.
+
+    This class extends `LTV_MPC_NoConstraints` to provide a constrained MPC implementation
+    for linear time-varying systems. It supports input, output, and input increment constraints,
+    and uses a quadratic programming (QP) solver for optimal control input calculation.
+    """
 
     def __init__(self, state_space: SymbolicStateSpace,
                  parameters_struct, Np: int, Nc: int,
@@ -639,6 +646,24 @@ class LTV_MPC(LTV_MPC_NoConstraints):
 
     def solve(self, reference_trajectory: MPC_ReferenceTrajectory,
               X_augmented: np.ndarray):
+        """
+        Solves the linear MPC optimization problem
+          for the given reference trajectory and augmented state.
+
+        This method updates the QP solver's constraints based on
+          the current control input and state,
+        then solves the quadratic program to compute
+          the optimal control input increment.
+
+        Args:
+            reference_trajectory (MPC_ReferenceTrajectory): The desired reference trajectory
+              for the MPC to track.
+            X_augmented (np.ndarray): The current augmented state vector.
+
+        Returns:
+            np.ndarray: The optimal change in control input (delta_U)
+              computed by the QP solver.
+        """
 
         self.qp_solver.update_constraints(
             U=self.U_latest,
