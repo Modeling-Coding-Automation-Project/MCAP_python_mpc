@@ -316,7 +316,11 @@ class StateSpaceUpdaterDeploy:
 
 
 class LTV_MPC_StateSpaceInitializer:
-    def __init__(self):
+    def __init__(self, caller_file_name_without_ext: str = None):
+
+        self.file_name_suffix = ""
+        if caller_file_name_without_ext is not None:
+            self.file_name_suffix = caller_file_name_without_ext + "_"
 
         self.mpc_state_space_updater_file_name = ""
         self.embedded_integrator_updater_file_name = ""
@@ -363,6 +367,8 @@ class LTV_MPC_StateSpaceInitializer:
             AttributeError: If the updater class or function cannot be found in the generated module.
             Exception: For any errors during code generation or execution.
         """
+        file_name = self.file_name_suffix + file_name
+
         StateSpaceUpdaterDeploy.create_write_ABCD_update_code(
             argument_struct=parameters_struct,
             A=A, B=B, C=C, D=D, class_name=MPC_STATE_SPACE_UPDATER_CLASS_NAME,
@@ -445,6 +451,8 @@ class LTV_MPC_StateSpaceInitializer:
             Writes the generated ABC update code to the specified file.
             Sets self.embedded_integrator_ABC_function_generated to True.
         """
+        file_name = self.file_name_suffix + file_name
+
         if state_space is None:
             raise ValueError("State space must be provided.")
         if not isinstance(state_space, StateSpaceEmbeddedIntegrator):
@@ -492,6 +500,7 @@ class LTV_MPC_StateSpaceInitializer:
               for computing Phi and F matrices.
             Sets self.Phi_F_function_generated to True upon successful code generation.
         """
+        file_name = self.file_name_suffix + file_name
 
         if state_space is None:
             raise ValueError("State space must be provided.")
@@ -600,17 +609,19 @@ class LTV_MPC_StateSpaceInitializer:
         Raises:
             Any exceptions raised by file I/O or dynamic import operations.
         """
+        file_name = self.file_name_suffix + file_name
+
         code_text = ""
         code_text += "from typing import Tuple\n"
         code_text += "import numpy as np\n\n"
 
         file_name_no_extension = os.path.splitext(
-            EMBEDDED_INTEGRATOR_UPDATER_FILE_NAME)[0]
+            self.embedded_integrator_updater_file_name)[0]
         code_text += "from " + file_name_no_extension + " import " + \
             EMBEDDED_INTEGRATOR_UPDATER_CLASS_NAME + "\n"
 
         file_name_no_extension = os.path.splitext(
-            PREDICTION_MATRICES_PHI_F_UPDATER_FILE_NAME)[0]
+            self.prediction_matrices_phi_f_updater_file_name)[0]
 
         code_text += "from " + file_name_no_extension + " import " + \
             PREDICTION_MATRICES_PHI_F_UPDATER_CLASS_NAME + "\n\n"

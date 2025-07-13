@@ -27,7 +27,6 @@ from python_mpc.linear_mpc import LTV_MPC_NoConstraints
 from sample.simulation_manager.visualize.simulation_plotter import SimulationPlotter
 from sample.simulation_manager.signal_edit.sampler import PulseGenerator
 
-from mpc_utility.state_space_utility_deploy import MPC_STATE_SPACE_UPDATER_FILE_NAME_NO_EXTENSION
 from mpc_utility.state_space_utility_deploy import MPC_STATE_SPACE_UPDATER_CLASS_NAME
 from mpc_utility.state_space_utility_deploy import MPC_STATE_SPACE_UPDATER_FUNCTION_NAME
 
@@ -58,7 +57,7 @@ class StateSpaceUpdater:
         local_vars = {"parameters": parameters}
 
         exe_code = (
-            f"from {MPC_STATE_SPACE_UPDATER_FILE_NAME_NO_EXTENSION} import " +
+            f"from servo_motor_mpc_state_space_updater import " +
             MPC_STATE_SPACE_UPDATER_CLASS_NAME + "\n"
             "A, B, C, D = " +
             MPC_STATE_SPACE_UPDATER_CLASS_NAME +
