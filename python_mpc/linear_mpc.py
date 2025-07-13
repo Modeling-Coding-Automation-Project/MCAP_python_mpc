@@ -391,6 +391,24 @@ class LTI_MPC(LTI_MPC_NoConstraints):
 
 
 class LTV_MPC_NoConstraints:
+    """
+    LTV_MPC_NoConstraints implements a Linear Time-Varying
+      Model Predictive Controller (MPC) without explicit input/output constraints.
+    This controller is designed for discrete-time,
+    symbolic state-space models and supports runtime parameter updates,
+    Kalman filtering for state estimation,
+    and embedded integrator augmentation for offset-free tracking.
+    It is suitable for applications requiring predictive control
+    with time-varying system dynamics and no hard constraints
+    on control actions or outputs.
+
+    Usage:
+        Instantiate with a symbolic state-space model, parameter dataclass,
+          prediction and control horizons, and weighting matrices.
+        Call update_manipulation(reference, Y) at each control step
+          to obtain the next control input.
+    """
+
     def __init__(self, state_space: SymbolicStateSpace,
                  parameters_struct,
                  Np: int, Nc: int,
@@ -493,6 +511,22 @@ class LTV_MPC_NoConstraints:
     def initialize_kalman_filter(self, state_space: SymbolicStateSpace,
                                  parameters_struct,
                                  Q_kf: np.ndarray, R_kf: np.ndarray) -> LinearKalmanFilter:
+        """
+        Initializes and returns a LinearKalmanFilter object
+          using the provided symbolic state space, parameters, and noise covariances.
+        Args:
+            state_space (SymbolicStateSpace): The symbolic state-space representation
+              containing system matrices (A, B, C) and delay information.
+            parameters_struct: Structure containing parameters required for
+              initializing the state-space matrices.
+            Q_kf (np.ndarray): Process noise covariance matrix. If None,
+              an identity matrix of appropriate size is used.
+            R_kf (np.ndarray): Measurement noise covariance matrix. If None,
+              an identity matrix of appropriate size is used.
+        Returns:
+            LinearKalmanFilter: An initialized and converged
+            Kalman filter object for the given system.
+        """
         if Q_kf is None:
             Q_kf = np.eye(state_space.A.shape[0])
         if R_kf is None:
@@ -517,6 +551,28 @@ class LTV_MPC_NoConstraints:
         return np.diag(np.tile(Weight, (self.Nc, 1)).flatten())
 
     def create_prediction_matrices(self) -> MPC_PredictionMatrices:
+        """
+        Creates and initializes the prediction matrices
+          required for Model Predictive Control (MPC).
+
+        This method constructs an instance of `MPC_PredictionMatrices`
+          using the controller's prediction and control horizons,
+        as well as the sizes of the augmented input, state,
+          and output vectors. It verifies that the augmented state-space
+        matrices (A, B, C) are symbolic, raising a ValueError if they are not.
+          The method then generates the updater function
+        for the time-varying prediction matrices (Phi and F)
+          and assigns it to the prediction matrices object. Finally, it
+        updates the Phi and F matrices at runtime
+          using the provided parameters structure.
+
+        Returns:
+            MPC_PredictionMatrices: An initialized prediction matrices
+              object with updated Phi and F matrices.
+
+        Raises:
+            ValueError: If the augmented state-space matrices are not symbolic.
+        """
 
         prediction_matrices = MPC_PredictionMatrices(
             Np=self.Np,
