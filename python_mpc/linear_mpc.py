@@ -10,6 +10,8 @@ supporting state estimation via a Kalman filter,
 reference trajectory tracking,
 and quadratic programming-based constraint handling.
 """
+import os
+import inspect
 import numpy as np
 import sympy as sp
 from dataclasses import is_dataclass
@@ -394,7 +396,29 @@ class LTV_MPC_NoConstraints:
                  Np: int, Nc: int,
                  Weight_U: np.ndarray, Weight_Y: np.ndarray,
                  Q_kf: np.ndarray = None, R_kf: np.ndarray = None,
-                 is_ref_trajectory: bool = False):
+                 is_ref_trajectory: bool = False,
+                 caller_file_name: str = None):
+
+        # inspect arguments
+        # Get the caller's frame
+        frame = inspect.currentframe().f_back
+        # Get the caller's local variables
+        caller_locals = frame.f_locals
+        # Find the variable name that matches the matrix_in value
+        variable_name = None
+        for name, value in caller_locals.items():
+            if value is state_space:
+                variable_name = name
+                break
+        # Get the caller's file name
+        if caller_file_name is None:
+            caller_file_full_path = frame.f_code.co_filename
+            caller_file_name = os.path.basename(caller_file_full_path)
+            caller_file_name_without_ext = os.path.splitext(caller_file_name)[
+                0]
+        else:
+            caller_file_name_without_ext = os.path.splitext(caller_file_name)[
+                0]
 
         # Check compatibility
         if state_space.delta_time <= 0.0:
@@ -412,7 +436,8 @@ class LTV_MPC_NoConstraints:
 
         self.parameters_struct = parameters_struct
 
-        self.state_space_initializer = LTV_MPC_StateSpaceInitializer()
+        self.state_space_initializer = LTV_MPC_StateSpaceInitializer(
+            caller_file_name_without_ext)
 
         self.kalman_filter = self.initialize_kalman_filter(
             state_space, self.parameters_struct, Q_kf, R_kf)
@@ -625,8 +650,25 @@ class LTV_MPC(LTV_MPC_NoConstraints):
                  U_min: np.ndarray = None, U_max: np.ndarray = None,
                  Y_min: np.ndarray = None, Y_max: np.ndarray = None):
 
+        # % inspect arguments
+        # Get the caller's frame
+        frame = inspect.currentframe().f_back
+        # Get the caller's local variables
+        caller_locals = frame.f_locals
+        # Find the variable name that matches the matrix_in value
+        variable_name = None
+        for name, value in caller_locals.items():
+            if value is state_space:
+                variable_name = name
+                break
+        # Get the caller's file name
+        caller_file_full_path = frame.f_code.co_filename
+        caller_file_name = os.path.basename(caller_file_full_path)
+        caller_file_name_without_ext = os.path.splitext(caller_file_name)[
+            0]
+
         super().__init__(state_space, parameters_struct, Np, Nc, Weight_U, Weight_Y,
-                         Q_kf, R_kf, is_ref_trajectory)
+                         Q_kf, R_kf, is_ref_trajectory, caller_file_name)
 
         delta_U_Nc = np.zeros((self.solver_factor.shape[0], 1))
 
