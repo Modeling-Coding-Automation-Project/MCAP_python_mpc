@@ -17,7 +17,7 @@ from external_libraries.MCAP_python_control.python_control.kalman_filter import 
 from external_libraries.MCAP_python_control.python_control.control_deploy import ExpressionDeploy
 
 
-class Adaptive_MPC_NoConstraints:
+class AdaptiveMPC_NoConstraints:
     def __init__(self,
                  delta_time: float,
                  X: sp.Matrix, U: sp.Matrix, Y: sp.Matrix,
@@ -52,36 +52,36 @@ class Adaptive_MPC_NoConstraints:
                 0]
 
         # create EKF object
-        self.fxu_file_name = ExpressionDeploy.write_state_function_code_from_sympy(
-            fxu, X, U)
-        self.fxu_jacobian_file_name = \
-            ExpressionDeploy.write_state_function_code_from_sympy(
-                fxu_jacobian, X, U)
-
-        self.hx_file_name = ExpressionDeploy.write_measurement_function_code_from_sympy(
-            hx, X)
-        self.hx_jacobian_file_name = \
-            ExpressionDeploy.write_measurement_function_code_from_sympy(
-                hx_jacobian, X)
-
-        self.ekf = self.initialize_kalman_filter(
-            fxu_file_name=self.fxu_file_name,
-            fxu_jacobian_file_name=self.fxu_jacobian_file_name,
-            hx_file_name=self.hx_file_name,
-            hx_jacobian_file_name=self.hx_jacobian_file_name,
-            Q_kf=Q_kf,
-            R_kf=R_kf,
-            parameters_struct=parameters_struct
-        )
+        self.ekf, self.fxu_file_name, self.fxu_jacobian_file_name, \
+            self.hx_file_name, self.hx_jacobian_file_name \
+            = self.initialize_kalman_filter(
+                X=X, U=U, Y=Y,
+                fxu=fxu, fxu_jacobian=fxu_jacobian,
+                hx=hx, hx_jacobian=hx_jacobian,
+                Q_kf=Q_kf,
+                R_kf=R_kf,
+                parameters_struct=parameters_struct
+            )
 
     def initialize_kalman_filter(self,
-                                 fxu_file_name: str,
-                                 fxu_jacobian_file_name: str,
-                                 hx_file_name: str,
-                                 hx_jacobian_file_name: str,
+                                 X: sp.Matrix, U: sp.Matrix, Y: sp.Matrix,
+                                 fxu: sp.Matrix, fxu_jacobian: sp.Matrix,
+                                 hx: sp.Matrix, hx_jacobian: sp.Matrix,
                                  Q_kf: np.ndarray,
                                  R_kf: np.ndarray,
                                  parameters_struct):
+
+        fxu_file_name = ExpressionDeploy.write_state_function_code_from_sympy(
+            fxu, X, U)
+        fxu_jacobian_file_name = \
+            ExpressionDeploy.write_state_function_code_from_sympy(
+                fxu_jacobian, X, U)
+
+        hx_file_name = ExpressionDeploy.write_measurement_function_code_from_sympy(
+            hx, X)
+        hx_jacobian_file_name = \
+            ExpressionDeploy.write_measurement_function_code_from_sympy(
+                hx_jacobian, X)
 
         local_vars = {}
 
@@ -100,13 +100,14 @@ class Adaptive_MPC_NoConstraints:
         hx_jacobian_script_function = local_vars["hx_jacobian_script_function"]
 
         ekf = ExtendedKalmanFilter(
-            state_transition_function=fxu_script_function,
-            state_transition_jacobian=fxu_jacobian_script_function,
+            state_function=fxu_script_function,
+            state_function_jacobian=fxu_jacobian_script_function,
             measurement_function=hx_script_function,
-            measurement_jacobian=hx_jacobian_script_function,
-            process_noise_covariance=Q_kf,
-            measurement_noise_covariance=R_kf,
-            parameters_struct=parameters_struct
+            measurement_function_jacobian=hx_jacobian_script_function,
+            Q=Q_kf,
+            R=R_kf,
+            Parameters=parameters_struct
         )
 
-        return ekf
+        return ekf, fxu_file_name, fxu_jacobian_file_name, \
+            hx_file_name, hx_jacobian_file_name

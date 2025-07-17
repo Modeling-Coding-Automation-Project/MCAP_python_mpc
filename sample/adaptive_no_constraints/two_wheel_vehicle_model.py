@@ -7,6 +7,8 @@ import numpy as np
 import sympy as sp
 from dataclasses import dataclass
 
+from python_mpc.adaptive_mpc import AdaptiveMPC_NoConstraints
+
 from sample.simulation_manager.visualize.simulation_plotter import SimulationPlotter
 from sample.simulation_manager.signal_edit.sampler import PulseGenerator
 
@@ -112,3 +114,21 @@ def main():
 
     Q_ekf = np.diag([1.0, 1.0, 1.0, 1.0, 1.0, 1.0])
     R_ekf = np.diag([1.0, 1.0, 1.0, 1.0, 1.0])
+
+    ada_mpc = AdaptiveMPC_NoConstraints(
+        delta_time=sim_delta_time,
+        X=X, U=U, Y=Y,
+        fxu=fxu, fxu_jacobian=fxu_jacobian,
+        hx=hx, hx_jacobian=hx_jacobian,
+        parameters_struct=parameters_ekf,
+        Np=10, Nc=5,
+        Weight_U=np.array([1.0, 1.0]),
+        Weight_Y=np.array([1.0, 1.0, 1.0, 1.0, 1.0]),
+        Q_kf=Q_ekf,
+        R_kf=R_ekf)
+
+    a = 1
+
+
+if __name__ == "__main__":
+    main()
