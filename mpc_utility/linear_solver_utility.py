@@ -589,10 +589,13 @@ class DU_U_Y_Limits:
         return self._Y_max_size
 
 
-class LTI_MPC_QP_Solver:
+class LMPC_QP_Solver:
     """
-    LTI_MPC_QP_Solver class implements a solver for Linear Time-Invariant (LTI) Model Predictive Control (MPC) problems using Quadratic Programming (QP).
-    It utilizes the DU_U_Y_Limits class to manage constraints on control increments (delta_U), control variables (U), and output variables (Y).
+    LMPC_QP_Solver class implements a solver for Linear Time-Invariant (LTI)
+    Model Predictive Control (MPC) problems using Quadratic Programming (QP).
+    It utilizes the DU_U_Y_Limits class to manage constraints on control increments
+    (delta_U), control variables (U), and output variables (Y).
+
     Attributes:
         number_of_variables (int): Number of control variables.
         output_size (int): Size of the output variables.

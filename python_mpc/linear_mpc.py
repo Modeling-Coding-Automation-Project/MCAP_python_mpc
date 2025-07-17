@@ -21,7 +21,7 @@ from mpc_utility.state_space_utility import StateSpaceEmbeddedIntegrator
 from mpc_utility.state_space_utility import MPC_PredictionMatrices
 from mpc_utility.state_space_utility import MPC_ReferenceTrajectory
 from mpc_utility.state_space_utility_deploy import LTV_MPC_StateSpaceInitializer
-from mpc_utility.linear_solver_utility import LTI_MPC_QP_Solver
+from mpc_utility.linear_solver_utility import LMPC_QP_Solver
 from mpc_utility.linear_solver_utility import symbolic_to_numeric_matrix
 from external_libraries.MCAP_python_control.python_control.kalman_filter import LinearKalmanFilter
 from external_libraries.MCAP_python_control.python_control.kalman_filter import DelayedVectorObject
@@ -351,7 +351,7 @@ class LTI_MPC(LTI_MPC_NoConstraints):
 
         delta_U_Nc = np.zeros((self.solver_factor.shape[0], 1))
 
-        self.qp_solver = LTI_MPC_QP_Solver(
+        self.qp_solver = LMPC_QP_Solver(
             number_of_variables=self.AUGMENTED_INPUT_SIZE * self.Nc,
             output_size=self.AUGMENTED_OUTPUT_SIZE,
             U=self.U_latest,
@@ -728,7 +728,7 @@ class LTV_MPC(LTV_MPC_NoConstraints):
 
         delta_U_Nc = np.zeros((self.solver_factor.shape[0], 1))
 
-        self.qp_solver = LTI_MPC_QP_Solver(
+        self.qp_solver = LMPC_QP_Solver(
             number_of_variables=self.AUGMENTED_INPUT_SIZE * self.Nc,
             output_size=self.AUGMENTED_OUTPUT_SIZE,
             U=self.U_latest,
