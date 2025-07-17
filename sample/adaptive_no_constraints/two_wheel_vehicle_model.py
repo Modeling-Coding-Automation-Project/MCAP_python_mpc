@@ -7,8 +7,6 @@ import numpy as np
 import sympy as sp
 from dataclasses import dataclass
 
-from external_libraries.MCAP_python_control.python_control.control_deploy import ExpressionDeploy
-
 from sample.simulation_manager.visualize.simulation_plotter import SimulationPlotter
 from sample.simulation_manager.signal_edit.sampler import PulseGenerator
 
@@ -84,21 +82,9 @@ def create_model(delta_time: float):
     fxu_jacobian = fxu.jacobian(X)
     hx_jacobian = hx.jacobian(X)
 
-    fxu_file_name = ExpressionDeploy.write_state_function_code_from_sympy(
-        fxu, X, U)
-    fxu_jacobian_file_name = \
-        ExpressionDeploy.write_state_function_code_from_sympy(
-            fxu_jacobian, X, U)
-
-    hx_file_name = ExpressionDeploy.write_measurement_function_code_from_sympy(
-        hx, X)
-    hx_jacobian_file_name = \
-        ExpressionDeploy.write_measurement_function_code_from_sympy(
-            hx_jacobian, X)
-
     return X, U, Y, \
-        fxu_file_name, fxu_jacobian_file_name, \
-        hx_file_name, hx_jacobian_file_name
+        fxu, fxu_jacobian, \
+        hx, hx_jacobian
 
 
 @dataclass
@@ -119,8 +105,8 @@ def main():
     time = np.arange(0, simulation_time, sim_delta_time)
 
     X, U, Y, \
-        fxu_file_name, fxu_jacobian_file_name, \
-        hx_file_name, hx_jacobian_file_name = create_model(sim_delta_time)
+        fxu, fxu_jacobian, \
+        hx, hx_jacobian = create_model(sim_delta_time)
 
     parameters_ekf = Parameter()
 
