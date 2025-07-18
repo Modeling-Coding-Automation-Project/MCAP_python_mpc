@@ -105,7 +105,8 @@ class AdaptiveMPC_NoConstraints:
             fxu_jacobian_X_function=self.kalman_filter.state_function_jacobian,
             fxu_jacobian_U_function=self.fxu_jacobian_U_script_function,
             hx_function=self.kalman_filter.measurement_function,
-            hx_jacobian_function=self.kalman_filter.measurement_function_jacobian
+            hx_jacobian_function=self.kalman_filter.measurement_function_jacobian,
+            caller_file_name_without_ext=caller_file_name_without_ext
         )
 
         # Embedded Integrator
@@ -118,10 +119,10 @@ class AdaptiveMPC_NoConstraints:
 
         self.Weight_U_Nc = self.update_weight(Weight_U)
 
-        # self.state_space_initializer.generate_prediction_matrices_phi_f(
-        #     Np=Np,
-        #     Nc=Nc,
-        #     state_space=self.augmented_ss)
+        self.state_space_initializer.generate_prediction_matrices_phi_f(
+            Np=Np,
+            Nc=Nc,
+            state_space=self.augmented_ss)
 
         self.prediction_matrices = self._create_prediction_matrices()
 

@@ -46,6 +46,107 @@ D_UPDATER_CLASS_NAME = "D_Updater"
 SYMPY_FUNCTION_NAME = "sympy_function"
 
 
+def generate_prediction_matrices_phi_f_common(
+        Np: int, Nc: int,
+        state_space: StateSpaceEmbeddedIntegrator = None,
+        file_name: str = PREDICTION_MATRICES_PHI_F_UPDATER_FILE_NAME):
+    """
+    Generates and writes Python code for computing the prediction matrices
+        Phi and F used in Model Predictive Control (MPC).
+
+    This method dynamically generates a Python class and function that,
+        given state-space matrices (A, B, C), computes the prediction matrices
+        Phi and F for specified prediction (Np) and control (Nc) horizons.
+    The generated code is written to a file for later use.
+
+    Args:
+        Np (int): Prediction horizon (number of future steps to predict).
+        Nc (int): Control horizon (number of future control moves to optimize).
+        state_space (StateSpaceEmbeddedIntegrator, optional): State-space model
+            containing matrices A, B, and C.
+            Must be an instance of StateSpaceEmbeddedIntegrator. Defaults to None.
+        file_name (str, optional): Path to the file where the generated code will be saved.
+            Defaults to PREDICTION_MATRICES_PHI_F_UPDATER_FILE_NAME.
+
+    Raises:
+        ValueError: If state_space is not provided.
+        TypeError: If state_space is not an instance of StateSpaceEmbeddedIntegrator.
+
+    Side Effects:
+        Writes a Python file containing a class and function
+            for computing Phi and F matrices.
+        Sets self.Phi_F_function_generated to True upon successful code generation.
+    """
+
+    if state_space is None:
+        raise ValueError("State space must be provided.")
+    if not isinstance(state_space, StateSpaceEmbeddedIntegrator):
+        raise TypeError(
+            "State space must be an instance of StateSpaceEmbeddedIntegrator.")
+
+    Phi_shape = (Np * state_space.C.shape[0], Nc * state_space.B.shape[1])
+    F_shape = (Np * state_space.C.shape[0], state_space.A.shape[1])
+
+    code_text = ""
+    code_text += "from typing import Tuple\n"
+    code_text += "import numpy as np\n\n\n"
+
+    # class for calculate Phi and F
+    code_text += "class " + PREDICTION_MATRICES_PHI_F_UPDATER_CLASS_NAME + ":\n\n"
+    code_text += "    @staticmethod\n"
+    code_text += "    def " + PREDICTION_MATRICES_PHI_F_UPDATER_FUNCTION_NAME + \
+        "(A: np.ndarray, B: np.ndarray, C: np.ndarray) -> " + \
+        f"Tuple[Tuple[{Phi_shape[0]}, {Phi_shape[1]}], Tuple[{F_shape[0]}, {F_shape[1]}]]:\n\n"
+
+    code_text += "        Phi = np.zeros(" + str(Phi_shape) + ")\n"
+    code_text += "        F = np.zeros(" + str(F_shape) + ")\n\n"
+
+    # Create intermediate variables for C @ A and C @ B
+    for i in range(Np):
+        if i == 0:
+            code_text += f"        C_A_1 = C @ A\n"
+        else:
+            code_text += f"        C_A_{i + 1} = C_A_{i} @ A\n"
+
+    code_text += "\n"
+
+    for i in range(Np):
+        if i == 0:
+            code_text += f"        C_A_0_B = C @ B\n"
+        else:
+            code_text += f"        C_A_{i}_B = C_A_{i} @ B\n"
+
+    code_text += "\n"
+
+    # substitute Phi
+    for i in range(Np):
+        for j in range(Nc):
+            row_index = i - j
+            if row_index >= 0:
+                for k in range(state_space.C.shape[0]):
+                    for l in range(state_space.B.shape[1]):
+                        code_text += \
+                            f"        Phi[{i * state_space.C.shape[0] + k}, {j * state_space.B.shape[1] + l}] = " + \
+                            f"C_A_{row_index}_B[{k}, {l}]\n"
+
+        code_text += "\n"
+    code_text += "\n"
+
+    # substitute F
+    for i in range(Np):
+        for k in range(state_space.C.shape[0]):
+            for l in range(state_space.A.shape[1]):
+                code_text += \
+                    f"        F[{i * state_space.C.shape[0] + k}, {l}] = C_A_{i + 1}[{k}, {l}]\n"
+        code_text += "\n"
+    code_text += "\n"
+
+    code_text += "        return Phi, F\n\n"
+
+    with open(file_name, "w", encoding="utf-8") as f:
+        f.write(code_text)
+
+
 class StateSpaceUpdaterDeploy:
     """
     A utility class for generating Python source code to update
@@ -487,102 +588,13 @@ class LTV_MPC_StateSpaceInitializer:
             self, Np: int, Nc: int,
             state_space: StateSpaceEmbeddedIntegrator = None,
             file_name: str = PREDICTION_MATRICES_PHI_F_UPDATER_FILE_NAME):
-        """
-        Generates and writes Python code for computing the prediction matrices
-          Phi and F used in Model Predictive Control (MPC).
 
-        This method dynamically generates a Python class and function that,
-          given state-space matrices (A, B, C), computes the prediction matrices
-            Phi and F for specified prediction (Np) and control (Nc) horizons.
-        The generated code is written to a file for later use.
-
-        Args:
-            Np (int): Prediction horizon (number of future steps to predict).
-            Nc (int): Control horizon (number of future control moves to optimize).
-            state_space (StateSpaceEmbeddedIntegrator, optional): State-space model
-              containing matrices A, B, and C.
-                Must be an instance of StateSpaceEmbeddedIntegrator. Defaults to None.
-            file_name (str, optional): Path to the file where the generated code will be saved.
-                Defaults to PREDICTION_MATRICES_PHI_F_UPDATER_FILE_NAME.
-
-        Raises:
-            ValueError: If state_space is not provided.
-            TypeError: If state_space is not an instance of StateSpaceEmbeddedIntegrator.
-
-        Side Effects:
-            Writes a Python file containing a class and function
-              for computing Phi and F matrices.
-            Sets self.Phi_F_function_generated to True upon successful code generation.
-        """
         file_name = self.file_name_suffix + file_name
 
-        if state_space is None:
-            raise ValueError("State space must be provided.")
-        if not isinstance(state_space, StateSpaceEmbeddedIntegrator):
-            raise TypeError(
-                "State space must be an instance of StateSpaceEmbeddedIntegrator.")
-
-        Phi_shape = (Np * state_space.C.shape[0], Nc * state_space.B.shape[1])
-        F_shape = (Np * state_space.C.shape[0], state_space.A.shape[1])
-
-        code_text = ""
-        code_text += "from typing import Tuple\n"
-        code_text += "import numpy as np\n\n\n"
-
-        # class for calculate Phi and F
-        code_text += "class " + PREDICTION_MATRICES_PHI_F_UPDATER_CLASS_NAME + ":\n\n"
-        code_text += "    @staticmethod\n"
-        code_text += "    def " + PREDICTION_MATRICES_PHI_F_UPDATER_FUNCTION_NAME + \
-            "(A: np.ndarray, B: np.ndarray, C: np.ndarray) -> " + \
-            f"Tuple[Tuple[{Phi_shape[0]}, {Phi_shape[1]}], Tuple[{F_shape[0]}, {F_shape[1]}]]:\n\n"
-
-        code_text += "        Phi = np.zeros(" + str(Phi_shape) + ")\n"
-        code_text += "        F = np.zeros(" + str(F_shape) + ")\n\n"
-
-        # Create intermediate variables for C @ A and C @ B
-        for i in range(Np):
-            if i == 0:
-                code_text += f"        C_A_1 = C @ A\n"
-            else:
-                code_text += f"        C_A_{i + 1} = C_A_{i} @ A\n"
-
-        code_text += "\n"
-
-        for i in range(Np):
-            if i == 0:
-                code_text += f"        C_A_0_B = C @ B\n"
-            else:
-                code_text += f"        C_A_{i}_B = C_A_{i} @ B\n"
-
-        code_text += "\n"
-
-        # substitute Phi
-        for i in range(Np):
-            for j in range(Nc):
-                row_index = i - j
-                if row_index >= 0:
-                    for k in range(state_space.C.shape[0]):
-                        for l in range(state_space.B.shape[1]):
-                            code_text += \
-                                f"        Phi[{i * state_space.C.shape[0] + k}, {j * state_space.B.shape[1] + l}] = " + \
-                                f"C_A_{row_index}_B[{k}, {l}]\n"
-
-            code_text += "\n"
-        code_text += "\n"
-
-        # substitute F
-        for i in range(Np):
-            for k in range(state_space.C.shape[0]):
-                for l in range(state_space.A.shape[1]):
-                    code_text += \
-                        f"        F[{i * state_space.C.shape[0] + k}, {l}] = C_A_{i + 1}[{k}, {l}]\n"
-            code_text += "\n"
-        code_text += "\n"
-
-        code_text += "        return Phi, F\n\n"
-
-        with open(file_name, "w", encoding="utf-8") as f:
-            f.write(code_text)
+        generate_prediction_matrices_phi_f_common(
+            Np=Np, Nc=Nc,
+            state_space=state_space,
+            file_name=file_name)
 
         self.prediction_matrices_phi_f_updater_file_name = file_name
         self.Phi_F_function_generated = True
@@ -679,13 +691,36 @@ class Adaptive_MPC_StateSpaceInitializer:
                  fxu_jacobian_X_function,
                  fxu_jacobian_U_function,
                  hx_function,
-                 hx_jacobian_function):
+                 hx_jacobian_function,
+                 caller_file_name_without_ext: str = None):
 
         self.fxu_function = fxu_function
         self.fxu_jacobian_X_function = fxu_jacobian_X_function
         self.fxu_jacobian_U_function = fxu_jacobian_U_function
         self.hx_function = hx_function
         self.hx_jacobian_function = hx_jacobian_function
+
+        self.file_name_suffix = ""
+        if caller_file_name_without_ext is not None:
+            self.file_name_suffix = caller_file_name_without_ext + "_"
+
+        self.prediction_matrices_phi_f_updater_file_name = ""
+        self.Phi_F_function_generated = False
+
+    def generate_prediction_matrices_phi_f(
+            self, Np: int, Nc: int,
+            state_space: StateSpaceEmbeddedIntegrator = None,
+            file_name: str = PREDICTION_MATRICES_PHI_F_UPDATER_FILE_NAME):
+
+        file_name = self.file_name_suffix + file_name
+
+        generate_prediction_matrices_phi_f_common(
+            Np=Np, Nc=Nc,
+            state_space=state_space,
+            file_name=file_name)
+
+        self.prediction_matrices_phi_f_updater_file_name = file_name
+        self.Phi_F_function_generated = True
 
     def generate_Adaptive_MPC_Phi_F_Updater(
             self, file_name: str = ADAPTIVE_MPC_PHI_F_UPDATER_FILE_NAME):

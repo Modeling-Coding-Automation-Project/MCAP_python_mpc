@@ -121,6 +121,9 @@ def main():
 
     X_initial = np.array([[0.0], [0.0], [0.0], [0.0], [0.0], [1.0]])
 
+    Np = 16
+    Nc = 1
+
     ada_mpc = AdaptiveMPC_NoConstraints(
         delta_time=sim_delta_time,
         X=X, U=U, Y=Y,
@@ -129,7 +132,7 @@ def main():
         fxu_jacobian_U=fxu_jacobian_U,
         hx=hx, hx_jacobian=hx_jacobian,
         parameters_struct=parameters_ekf,
-        Np=10, Nc=5,
+        Np=Np, Nc=Nc,
         Weight_U=Weight_U,
         Weight_Y=Weight_Y,
         Q_kf=Q_ekf,
