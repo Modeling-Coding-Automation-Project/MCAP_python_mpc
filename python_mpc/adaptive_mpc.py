@@ -10,6 +10,7 @@ from mpc_utility.state_space_utility import MPC_PredictionMatrices
 from mpc_utility.state_space_utility import MPC_ReferenceTrajectory
 
 from mpc_utility.linear_solver_utility import LMPC_QP_Solver
+from mpc_utility.state_space_utility import Adaptive_MPC_StateSpaceInitializer
 
 from external_libraries.MCAP_python_control.python_control.kalman_filter import ExtendedKalmanFilter
 from external_libraries.MCAP_python_control.python_control.kalman_filter import DelayedVectorObject
@@ -21,7 +22,8 @@ class AdaptiveMPC_NoConstraints:
     def __init__(self,
                  delta_time: float,
                  X: sp.Matrix, U: sp.Matrix, Y: sp.Matrix,
-                 fxu: sp.Matrix, fxu_jacobian: sp.Matrix,
+                 fxu: sp.Matrix, fxu_jacobian_X: sp.Matrix,
+                 fxu_jacobian_U: sp.Matrix,
                  hx: sp.Matrix, hx_jacobian: sp.Matrix,
                  parameters_struct,
                  Np: int, Nc: int,
@@ -70,20 +72,33 @@ class AdaptiveMPC_NoConstraints:
         self.parameters_struct = parameters_struct
 
         # create EKF object
-        self.kalman_filter, self.fxu_file_name, self.fxu_jacobian_file_name, \
+        self.kalman_filter, self.fxu_file_name, self.fxu_jacobian_X_file_name, \
             self.hx_file_name, self.hx_jacobian_file_name \
             = self.initialize_kalman_filter(
                 X=X, U=U, Y=Y,
-                fxu=fxu, fxu_jacobian=fxu_jacobian,
+                fxu=fxu, fxu_jacobian_X=fxu_jacobian_X,
                 hx=hx, hx_jacobian=hx_jacobian,
                 Q_kf=Q_kf,
                 R_kf=R_kf,
                 parameters_struct=parameters_struct
             )
 
+        # state space initialization
+        self.fxu_jacobian_U_script_function, \
+            self.fxu_jacobian_U_file_name = \
+            self.generate_fxu_jacobian_U_function(fxu_jacobian_U, X, U)
+
+        self.state_space_initializer = Adaptive_MPC_StateSpaceInitializer(
+            fxu_function=self.kalman_filter.state_function,
+            fxu_jacobian_X_function=self.kalman_filter.state_function_jacobian,
+            fxu_jacobian_U_function=self.fxu_jacobian_U_script_function,
+            hx_function=self.kalman_filter.measurement_function,
+            hx_jacobian_function=self.kalman_filter.measurement_function_jacobian
+        )
+
     def initialize_kalman_filter(self,
                                  X: sp.Matrix, U: sp.Matrix, Y: sp.Matrix,
-                                 fxu: sp.Matrix, fxu_jacobian: sp.Matrix,
+                                 fxu: sp.Matrix, fxu_jacobian_X: sp.Matrix,
                                  hx: sp.Matrix, hx_jacobian: sp.Matrix,
                                  Q_kf: np.ndarray,
                                  R_kf: np.ndarray,
@@ -91,9 +106,9 @@ class AdaptiveMPC_NoConstraints:
 
         fxu_file_name = ExpressionDeploy.write_state_function_code_from_sympy(
             fxu, X, U)
-        fxu_jacobian_file_name = \
+        fxu_jacobian_X_file_name = \
             ExpressionDeploy.write_state_function_code_from_sympy(
-                fxu_jacobian, X, U)
+                fxu_jacobian_X, X, U)
 
         hx_file_name = ExpressionDeploy.write_measurement_function_code_from_sympy(
             hx, X)
@@ -106,7 +121,7 @@ class AdaptiveMPC_NoConstraints:
         exec(f"from {fxu_file_name} import function as fxu_script_function",
              globals(), local_vars)
         exec(
-            f"from {fxu_jacobian_file_name} import function as fxu_jacobian_script_function", globals(), local_vars)
+            f"from {fxu_jacobian_X_file_name} import function as fxu_jacobian_script_function", globals(), local_vars)
         exec(f"from {hx_file_name} import function as hx_script_function",
              globals(), local_vars)
         exec(
@@ -127,5 +142,18 @@ class AdaptiveMPC_NoConstraints:
             Parameters=parameters_struct
         )
 
-        return kalman_filter, fxu_file_name, fxu_jacobian_file_name, \
+        return kalman_filter, fxu_file_name, fxu_jacobian_X_file_name, \
             hx_file_name, hx_jacobian_file_name
+
+    def generate_fxu_jacobian_U_function(self, fxu_jacobian_U: sp.Matrix,
+                                         X: sp.Matrix, U: sp.Matrix):
+        fxu_jacobian_U_file_name = ExpressionDeploy.write_state_function_code_from_sympy(
+            fxu_jacobian_U, X, U)
+
+        local_vars = {}
+
+        exec(f"from {fxu_jacobian_U_file_name} import function as fxu_jacobian_U_script_function",
+             globals(), local_vars)
+        fxu_jacobian_U_script_function = local_vars["fxu_jacobian_U_script_function"]
+
+        return fxu_jacobian_U_script_function, fxu_jacobian_U_file_name

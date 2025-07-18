@@ -81,11 +81,12 @@ def create_model(delta_time: float):
     sp.pprint(hx)
 
     # derive Jacobian
-    fxu_jacobian = fxu.jacobian(X)
+    fxu_jacobian_X = fxu.jacobian(X)
+    fxu_jacobian_U = fxu.jacobian(U)
     hx_jacobian = hx.jacobian(X)
 
     return X, U, Y, \
-        fxu, fxu_jacobian, \
+        fxu, fxu_jacobian_X, fxu_jacobian_U, \
         hx, hx_jacobian
 
 
@@ -107,7 +108,7 @@ def main():
     time = np.arange(0, simulation_time, sim_delta_time)
 
     X, U, Y, \
-        fxu, fxu_jacobian, \
+        fxu, fxu_jacobian_X, fxu_jacobian_U, \
         hx, hx_jacobian = create_model(sim_delta_time)
 
     parameters_ekf = Parameter()
@@ -118,7 +119,8 @@ def main():
     ada_mpc = AdaptiveMPC_NoConstraints(
         delta_time=sim_delta_time,
         X=X, U=U, Y=Y,
-        fxu=fxu, fxu_jacobian=fxu_jacobian,
+        fxu=fxu, fxu_jacobian_X=fxu_jacobian_X,
+        fxu_jacobian_U=fxu_jacobian_U,
         hx=hx, hx_jacobian=hx_jacobian,
         parameters_struct=parameters_ekf,
         Np=10, Nc=5,
