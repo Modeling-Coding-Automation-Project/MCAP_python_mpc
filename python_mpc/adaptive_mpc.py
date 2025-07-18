@@ -118,6 +118,10 @@ class AdaptiveMPC_NoConstraints:
             hx_jacobian=hx_jacobian
         )
 
+        self.state_space_initializer.generate_initial_embedded_integrator(
+            parameters_struct=self.parameters_struct,
+            state_space=self.augmented_ss)
+
         if Nc > Np:
             raise ValueError("Nc must be less than or equal to Np.")
         self.Np = Np

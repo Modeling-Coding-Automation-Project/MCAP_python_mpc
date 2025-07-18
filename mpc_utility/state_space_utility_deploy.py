@@ -707,6 +707,32 @@ class Adaptive_MPC_StateSpaceInitializer:
         self.prediction_matrices_phi_f_updater_file_name = ""
         self.Phi_F_function_generated = False
 
+        self.embedded_integrator_updater_file_name = ""
+        self.embedded_integrator_ABC_function_generated = False
+
+    def generate_initial_embedded_integrator(
+            self, parameters_struct,
+            state_space: StateSpaceEmbeddedIntegrator = None,
+            file_name: str = EMBEDDED_INTEGRATOR_UPDATER_FILE_NAME):
+
+        file_name = self.file_name_suffix + file_name
+
+        if state_space is None:
+            raise ValueError("State space must be provided.")
+        if not isinstance(state_space, StateSpaceEmbeddedIntegrator):
+            raise TypeError(
+                "State space must be an instance of StateSpaceEmbeddedIntegrator.")
+
+        StateSpaceUpdaterDeploy.create_write_ABCD_update_code(
+            argument_struct=parameters_struct,
+            A=state_space.A, B=state_space.B,
+            C=state_space.C, D=None,
+            class_name=EMBEDDED_INTEGRATOR_UPDATER_CLASS_NAME,
+            file_name=file_name)
+
+        self.embedded_integrator_updater_file_name = file_name
+        self.embedded_integrator_ABC_function_generated = True
+
     def generate_prediction_matrices_phi_f(
             self, Np: int, Nc: int,
             state_space: StateSpaceEmbeddedIntegrator = None,
