@@ -178,7 +178,7 @@ def main():
     R_ekf = np.diag([1.0, 1.0, 1.0, 1.0, 1.0])
 
     Weight_U = np.array([0.1, 0.1])
-    Weight_Y = np.array([1.0, 1.0, 0.01, 0.01, 1.0])
+    Weight_Y = np.array([1.0, 1.0, 1.0, 1.0, 1.0])
 
     X_initial = np.array([[0.0], [0.0], [0.0], [0.0], [0.0], [10.0]])
 
