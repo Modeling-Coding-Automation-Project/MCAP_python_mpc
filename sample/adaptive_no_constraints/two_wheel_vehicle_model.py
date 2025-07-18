@@ -2,7 +2,6 @@ import os
 import sys
 sys.path.append(os.getcwd())
 
-import math
 import numpy as np
 import sympy as sp
 from dataclasses import dataclass
