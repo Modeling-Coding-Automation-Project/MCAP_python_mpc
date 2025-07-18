@@ -78,7 +78,7 @@ class AdaptiveMPC_NoConstraints:
 
         self.AUGMENTED_INPUT_SIZE = U.shape[0]
         self.AUGMENTED_STATE_SIZE = X.shape[0] + Y.shape[0]
-        self.AUGMENTED_OUTPUT_SIZE = X.shape[0] + Y.shape[0]
+        self.AUGMENTED_OUTPUT_SIZE = Y.shape[0]
 
         self.U_latest = np.zeros(
             (self.AUGMENTED_INPUT_SIZE, 1))
