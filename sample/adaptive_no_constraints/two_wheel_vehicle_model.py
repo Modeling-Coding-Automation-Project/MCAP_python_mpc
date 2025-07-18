@@ -203,7 +203,7 @@ def main():
         Number_of_Delay=0)
 
     # X: px, py, theta, r, beta, V
-    x_true = np.array([[0.0], [0.0], [0.0], [0.0], [0.0], [10.0]])
+    x_true = X_initial
     # U: delta, accel
     u = np.array([[0.0], [0.0]])
 
