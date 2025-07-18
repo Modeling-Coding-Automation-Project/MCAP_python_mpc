@@ -1,3 +1,16 @@
+""" File: adaptive_mpc.py
+
+This module implements Adaptive Model Predictive Control (MPC)
+algorithms for nonlinear systems using symbolic state-space models.
+It provides the AdaptiveMPC_NoConstraints class,
+which supports state estimation via an Extended Kalman Filter (EKF),
+reference trajectory tracking, and adaptive prediction matrix updates.
+The controller is designed for discrete-time systems,
+handles parameter adaptation, and can compensate for output delays.
+Key features include symbolic model deployment,
+embedded integrator support, and flexible weighting for control
+and output objectives.
+"""
 import os
 import inspect
 import numpy as np
@@ -20,6 +33,14 @@ from external_libraries.MCAP_python_control.python_control.control_deploy import
 
 
 class AdaptiveMPC_NoConstraints:
+    """
+    Adaptive Model Predictive Control (MPC) class without input/output constraints.
+    This class implements an adaptive MPC controller for discrete-time state-space models,
+    supporting state estimation via an Extended Kalman Filter (EKF), embedded integrator augmentation,
+    and runtime adaptation of prediction matrices. It is designed for use with symbolic models
+    (SymPy) and supports reference trajectory tracking, delay compensation, and parameter adaptation.
+    """
+
     def __init__(self,
                  delta_time: float,
                  X: sp.Matrix, U: sp.Matrix, Y: sp.Matrix,
@@ -158,6 +179,23 @@ class AdaptiveMPC_NoConstraints:
     def create_parameters_X_U_struct(
             self, parameters_struct,
             X: sp.Matrix, U: sp.Matrix):
+        """
+        Creates a new dataclass instance that merges the fields of the given parameters_struct
+        with the free symbolic variables found in the provided X and U matrices.
+
+        The resulting dataclass includes all existing fields from parameters_struct and adds
+        new fields for any symbolic variables present in X and U that are not already in parameters_struct.
+        These new fields are initialized with a default value of 0.0 and type float.
+
+        Args:
+            parameters_struct: An instance of a dataclass containing parameter fields.
+            X (sp.Matrix): A SymPy matrix containing symbolic variables.
+            U (sp.Matrix): A SymPy matrix containing symbolic variables.
+
+        Returns:
+            An instance of a dynamically created dataclass that contains all fields from
+            parameters_struct and additional fields for the symbolic variables in X and U.
+        """
 
         # merge parameters and X, U
         free_symbols = set()
@@ -187,6 +225,34 @@ class AdaptiveMPC_NoConstraints:
                                  R_kf: np.ndarray,
                                  parameters_struct,
                                  file_name_without_ext: str):
+        """
+        Initializes an Extended Kalman Filter (EKF) using symbolic model functions and their Jacobians.
+
+        This method generates Python code for the state and measurement functions (and their Jacobians)
+        from SymPy expressions, dynamically imports them, and constructs an EKF instance with the provided
+        noise covariances and parameters.
+
+        Args:
+            X (sp.Matrix): Symbolic state vector.
+            U (sp.Matrix): Symbolic input vector.
+            Y (sp.Matrix): Symbolic measurement vector.
+            fxu (sp.Matrix): Symbolic state transition function f(x, u).
+            fxu_jacobian_X (sp.Matrix): Jacobian of the state transition function with respect to X.
+            hx (sp.Matrix): Symbolic measurement function h(x).
+            hx_jacobian (sp.Matrix): Jacobian of the measurement function with respect to X.
+            Q_kf (np.ndarray): Process noise covariance matrix.
+            R_kf (np.ndarray): Measurement noise covariance matrix.
+            parameters_struct: Additional parameters required for the filter.
+            file_name_without_ext (str): Base filename for generated function scripts.
+
+        Returns:
+            tuple: (
+                kalman_filter (ExtendedKalmanFilter): Initialized EKF instance,
+                fxu_file_name (str): Filename of the generated state function script,
+                fxu_jacobian_X_file_name (str): Filename of the generated state function Jacobian script,
+                hx_file_name (str): Filename of the generated measurement function script,
+                hx_jacobian_file_name (str): Filename of the generated measurement function Jacobian script
+        """
 
         fxu_file_name = ExpressionDeploy.write_state_function_code_from_sympy(
             fxu, X, U, file_name_without_ext)
@@ -236,6 +302,28 @@ class AdaptiveMPC_NoConstraints:
             file_name_without_ext: str):
         fxu_jacobian_U_file_name = ExpressionDeploy.write_state_function_code_from_sympy(
             fxu_jacobian_U, X, U, file_name_without_ext)
+        """
+        Generates a Python function from a symbolic Jacobian matrix with respect to the input variables (U),
+        writes the function code to a file, and dynamically imports the generated function.
+
+        Args:
+            fxu_jacobian_U (sp.Matrix): The symbolic Jacobian matrix of the system with respect to input variables U.
+            X (sp.Matrix): The symbolic state variables.
+            U (sp.Matrix): The symbolic input variables.
+            file_name_without_ext (str): The base file name (without extension) for the generated Python code.
+
+        Returns:
+            tuple: A tuple containing:
+                - fxu_jacobian_U_script_function (callable): The imported Python function generated from the symbolic Jacobian.
+                - fxu_jacobian_U_file_name (str): The file name of the generated Python code.
+
+        Raises:
+            ImportError: If the generated function cannot be imported.
+            Exception: For other errors during code generation or execution.
+
+        Note:
+            This method uses dynamic code generation and import, which may have security implications.
+        """
 
         local_vars = {}
 
@@ -251,6 +339,24 @@ class AdaptiveMPC_NoConstraints:
             fxu_jacobian_U: sp.Matrix,
             hx_jacobian: sp.Matrix
     ) -> StateSpaceEmbeddedIntegrator:
+        """
+        Generates an augmented state-space model with an embedded integrator.
+
+        This method constructs a symbolic state-space representation using the provided Jacobian matrices
+        for the system dynamics and output equations. It then augments the state-space model with an embedded
+        integrator and performs dimension checks to ensure consistency with the expected augmented input and output sizes.
+
+        Args:
+            fxu_jacobian_X (sp.Matrix): Jacobian matrix of the system dynamics with respect to the state variables.
+            fxu_jacobian_U (sp.Matrix): Jacobian matrix of the system dynamics with respect to the input variables.
+            hx_jacobian (sp.Matrix): Jacobian matrix of the output equation with respect to the state variables.
+
+        Returns:
+            StateSpaceEmbeddedIntegrator: Augmented state-space model with embedded integrator.
+
+        Raises:
+            ValueError: If the dimensions of the augmented input or output do not match the expected sizes.
+        """
 
         A = fxu_jacobian_X
         B = fxu_jacobian_U
@@ -281,10 +387,40 @@ class AdaptiveMPC_NoConstraints:
         return augmented_ss
 
     def update_weight(self, Weight: np.ndarray):
+        """
+        Updates and returns the weight matrix for the MPC controller.
+
+        Parameters
+        ----------
+        Weight : np.ndarray
+            A 1D array of weights to be applied to the control inputs.
+
+        Returns
+        -------
+        np.ndarray
+            A diagonal matrix of shape (Nc * len(Weight), Nc * len(Weight)),
+            where the weights are repeated Nc times and placed along the diagonal.
+        """
 
         return np.diag(np.tile(Weight, (self.Nc, 1)).flatten())
 
     def _create_prediction_matrices(self) -> MPC_PredictionMatrices:
+        """
+        Creates and initializes the prediction matrices
+          required for adaptive Model Predictive Control (MPC).
+
+        This method constructs an instance of `MPC_PredictionMatrices`
+          using the controller's prediction and control horizons,
+        as well as the augmented input, state, and output sizes.
+          It then generates and assigns the adaptive Phi_F updater
+        function from the state space initializer.
+          The prediction matrices are updated at runtime using the latest parameters,
+        symbolic variables, and state/input arrays.
+
+        Returns:
+            MPC_PredictionMatrices: An object containing the initialized
+              and updated prediction matrices for adaptive MPC.
+        """
 
         prediction_matrices = MPC_PredictionMatrices(
             Np=self.Np,
@@ -312,6 +448,29 @@ class AdaptiveMPC_NoConstraints:
             self,
             reference_trajectory: np.ndarray,
             Y: np.ndarray):
+        """
+        Creates a reference trajectory for the MPC controller by computing the difference 
+        between the provided reference trajectory and the current output Y.
+
+        Parameters
+        ----------
+        reference_trajectory : np.ndarray
+            The desired reference trajectory, either as a single row vector or a matrix 
+            with Np row vectors.
+        Y : np.ndarray
+            The current output vector.
+
+        Returns
+        -------
+        trajectory : MPC_ReferenceTrajectory
+            The processed reference trajectory object for MPC.
+
+        Raises
+        ------
+        ValueError
+            If the reference_trajectory does not have the correct shape (must be either 
+            a single row vector or Np row vectors).
+        """
 
         if self.is_ref_trajectory:
             if not ((reference_trajectory.shape[1] == self.Np) or
@@ -330,6 +489,28 @@ class AdaptiveMPC_NoConstraints:
         return trajectory
 
     def update_solver_factor(self, Phi: np.ndarray, Weight_U_Nc: np.ndarray):
+        """
+        Updates the solver factor used in the MPC optimization
+          by solving a linear system.
+        Parameters
+        ----------
+        Phi : np.ndarray
+            The regressor matrix, typically of shape (N, Nc),
+              where N is the number of samples and Nc is the control horizon.
+        Weight_U_Nc : np.ndarray
+            The weighting matrix for the control input,
+              expected to be square and of shape (Nc, Nc).
+        Raises
+        ------
+        ValueError
+            If the dimensions of `Phi` and `Weight_U_Nc` are not compatible.
+        Notes
+        -----
+        The solver factor is computed as the solution to the linear system:
+            (Phi.T @ Phi + Weight_U_Nc) * X = Phi.T
+        and stored in `self.solver_factor`.
+        """
+
         if (Phi.shape[1] != Weight_U_Nc.shape[0]) or (Phi.shape[1] != Weight_U_Nc.shape[1]):
             raise ValueError("Weight must have compatible dimensions.")
 
@@ -344,12 +525,45 @@ class AdaptiveMPC_NoConstraints:
         return delta_U
 
     def calculate_this_U(self, U, delta_U):
+        """
+        Updates the input matrix U by adding the corresponding elements from delta_U.
+        Parameters:
+            U (numpy.ndarray): The current input matrix.
+            delta_U (numpy.ndarray): The change to be applied to the input matrix.
+        Returns:
+            numpy.ndarray: The updated input matrix after applying delta_U.
+        Notes:
+            Only the first AUGMENTED_INPUT_SIZE rows of delta_U are added to U.
+        """
+
         U = U + \
             delta_U[:self.AUGMENTED_INPUT_SIZE, :]
 
         return U
 
     def compensate_X_Y_delay(self, X: np.ndarray, Y: np.ndarray):
+        """
+        Compensates for delay in the X and Y signals using a Kalman filter and stored Y values.
+        Parameters
+        ----------
+        X : np.ndarray
+            The current state estimate.
+        Y : np.ndarray
+            The current output measurement.
+        Returns
+        -------
+        X : np.ndarray
+            The compensated state estimate.
+        Y : np.ndarray
+            The compensated output measurement, adjusted for delay if applicable.
+        Notes
+        -----
+        If `Number_of_Delay` is greater than zero, the function uses the Kalman filter to estimate
+        the state and output without delay, stores the output, and compensates for the delay by
+        adding the difference between the measured and stored output. Otherwise, it simply stores
+        the output and returns the original state and output.
+        """
+
         if self.Number_of_Delay > 0:
             Y_measured = Y
 
@@ -367,10 +581,41 @@ class AdaptiveMPC_NoConstraints:
             return X, Y
 
     def update_parameters(self, parameters_struct):
+        """
+        Updates the parameters of the Kalman filter with the provided parameters structure.
+
+        Args:
+            parameters_struct: A structure or object containing the parameters to update
+                the Kalman filter with. The expected format should match the requirements
+                of the Kalman filter's Parameters attribute.
+
+        Returns:
+            None
+        """
 
         self.kalman_filter.Parameters = parameters_struct
 
     def update_manipulation(self, reference: np.ndarray, Y: np.ndarray):
+        """
+        Updates the control manipulation based on the provided reference trajectory and measured output.
+
+        This method performs the following steps:
+        1. Updates the Kalman filter with the latest control input and measured output.
+        2. Compensates for delays in the state and output.
+        3. Updates the adaptive prediction matrices using the current state and control input.
+        4. Updates the solver factorization for the MPC optimization problem.
+        5. Computes the augmented state vector using the compensated state and output.
+        6. Generates the reference trajectory for the MPC.
+        7. Solves the MPC optimization problem to obtain the control increment.
+        8. Updates the latest control input and internal model state.
+
+        Args:
+            reference (np.ndarray): The desired reference trajectory for the output.
+            Y (np.ndarray): The current measured output.
+
+        Returns:
+            np.ndarray: The updated control input to be applied.
+        """
 
         self.kalman_filter.predict_and_update(
             self.U_latest, Y)

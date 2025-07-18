@@ -1,3 +1,17 @@
+"""
+File: state_space_utility_deploy.py
+
+This module provides utilities for generating, updating,
+and managing state-space models and prediction matrices
+for Model Predictive Control (MPC) applications.
+It supports symbolic and numeric matrix generation using SymPy,
+dynamic code generation for state-space updaters,
+and automated creation of prediction matrices (Phi, F) for MPC horizons.
+The module includes classes for Linear Time-Varying (LTV) and Adaptive MPC,
+enabling flexible initialization and runtime updates of system models
+and prediction matrices through dynamically written
+and imported Python modules.
+"""
 import os
 import sys
 sys.path.append(os.getcwd())
@@ -593,6 +607,26 @@ class LTV_MPC_StateSpaceInitializer:
             self, Np: int, Nc: int,
             state_space: StateSpaceEmbeddedIntegrator = None,
             file_name: str = PREDICTION_MATRICES_PHI_F_UPDATER_FILE_NAME):
+        """
+        Generates and saves the prediction matrices Phi and F
+          for Model Predictive Control (MPC).
+
+        Args:
+            Np (int): Prediction horizon.
+            Nc (int): Control horizon.
+            state_space (StateSpaceEmbeddedIntegrator, optional):
+              State-space model with embedded integrator. Defaults to None.
+            file_name (str, optional): Name of the file to save the prediction matrices.
+              Defaults to PREDICTION_MATRICES_PHI_F_UPDATER_FILE_NAME.
+
+        Side Effects:
+            - Updates `self.prediction_matrices_phi_f_updater_file_name`
+              with the actual file name used.
+            - Sets `self.Phi_F_function_generated` to True after successful generation.
+            - Calls `generate_prediction_matrices_phi_f_common`
+              to perform the actual matrix generation and saving.
+
+        """
 
         file_name = self.file_name_suffix + file_name
 
@@ -692,6 +726,21 @@ class LTV_MPC_StateSpaceInitializer:
 
 
 class Adaptive_MPC_StateSpaceInitializer:
+    """
+    A utility class for initializing and generating code for
+    adaptive Model Predictive Control (MPC) state-space models.
+    This class provides methods to generate and manage code
+    for embedded integrator state-space models,
+    prediction matrices (Phi and F), and adaptive MPC Phi-F updaters.
+    It is designed to facilitate code generation and deployment
+    for MPC applications where model parameters may change at runtime.
+
+    Usage:
+        Instantiate with required function handles,
+        then call the generation methods to produce code
+        for MPC deployment and adaptation.
+    """
+
     def __init__(self, fxu_function,
                  fxu_jacobian_X_function,
                  fxu_jacobian_U_function,
@@ -723,6 +772,30 @@ class Adaptive_MPC_StateSpaceInitializer:
             parameters_X_U_struct,
             state_space: StateSpaceEmbeddedIntegrator = None,
             file_name: str = EMBEDDED_INTEGRATOR_UPDATER_FILE_NAME):
+        """
+        Generates and writes the initial embedded integrator update code to a file.
+
+        This method creates the update code for the embedded integrator's state-space representation
+        using the provided parameters and state space object. The generated code is written to a file
+        whose name is constructed from the given file name and an internal suffix.
+
+        Args:
+            parameters_X_U_struct: Structure containing parameters for the state-space update.
+            state_space (StateSpaceEmbeddedIntegrator): The state-space object representing
+              the embedded integrator.
+            file_name (str, optional): The base name of the file to write the update code to.
+              Defaults to EMBEDDED_INTEGRATOR_UPDATER_FILE_NAME.
+
+        Raises:
+            ValueError: If the state_space argument is not provided.
+            TypeError: If the state_space is not an instance of StateSpaceEmbeddedIntegrator.
+
+        Side Effects:
+            Writes the generated update code to a file.
+            Updates internal attributes:
+                - embedded_integrator_updater_file_name
+                - embedded_integrator_ABC_function_generated
+        """
 
         file_name = self.file_name_suffix + file_name
 
@@ -746,6 +819,23 @@ class Adaptive_MPC_StateSpaceInitializer:
             self, Np: int, Nc: int,
             state_space: StateSpaceEmbeddedIntegrator = None,
             file_name: str = PREDICTION_MATRICES_PHI_F_UPDATER_FILE_NAME):
+        """
+        Generates and saves the prediction matrices Phi and F
+          for Model Predictive Control (MPC).
+
+        Args:
+            Np (int): Prediction horizon.
+            Nc (int): Control horizon.
+            state_space (StateSpaceEmbeddedIntegrator, optional):
+              State-space model with embedded integrator. Defaults to None.
+            file_name (str, optional): Name of the file to save the prediction matrices.
+              Defaults to PREDICTION_MATRICES_PHI_F_UPDATER_FILE_NAME.
+
+        Side Effects:
+            - Saves the generated prediction matrices to a file with a suffix.
+            - Updates `self.prediction_matrices_phi_f_updater_file_name` with the file name.
+            - Sets `self.Phi_F_function_generated` to True.
+        """
 
         file_name = self.file_name_suffix + file_name
 
@@ -759,6 +849,29 @@ class Adaptive_MPC_StateSpaceInitializer:
 
     def generate_Adaptive_MPC_Phi_F_Updater(
             self, file_name: str = ADAPTIVE_MPC_PHI_F_UPDATER_FILE_NAME):
+        """
+        Generates and writes a Python module that defines an adaptive MPC Phi and F updater class.
+
+        The generated module imports required classes and functions for updating embedded integrator
+        and prediction matrices, then defines a static method to compute Phi and F matrices from
+        given parameters.
+
+        Args:
+            file_name (str, optional): The name of the file to write the generated code to.
+                Defaults to ADAPTIVE_MPC_PHI_F_UPDATER_FILE_NAME.
+
+        Side Effects:
+            - Writes a Python file containing the updater class and function.
+            - Dynamically imports the generated module and retrieves the updater function.
+            - Sets instance attributes:
+                - Adaptive_MPC_Phi_F_updater_function: Reference to the generated updater function.
+                - Adaptive_MPC_Phi_F_updater_file_name: Name of the generated file.
+                - Adaptive_MPC_Phi_F_function_generated: Flag indicating successful generation.
+
+        Raises:
+            ImportError: If the generated module or class/function cannot be imported.
+            OSError: If the file cannot be written.
+        """
 
         file_name = self.file_name_suffix + file_name
 
