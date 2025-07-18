@@ -225,6 +225,7 @@ class AdaptiveMPC_NoConstraints:
             R=R_kf,
             Parameters=parameters_struct
         )
+        kalman_filter.x_hat = self.X_inner_model
 
         return kalman_filter, fxu_file_name, fxu_jacobian_X_file_name, \
             hx_file_name, hx_jacobian_file_name
@@ -362,6 +363,7 @@ class AdaptiveMPC_NoConstraints:
         else:
             # This is for calculating y difference
             self.Y_store.push(Y)
+
             return X, Y
 
     def update_parameters(self, parameters_struct):
