@@ -14,6 +14,7 @@ import os
 import sys
 sys.path.append(os.getcwd())
 
+import math
 import numpy as np
 import sympy as sp
 from dataclasses import dataclass
@@ -101,6 +102,55 @@ def create_model(delta_time: float):
         hx, hx_jacobian
 
 
+def create_reference(
+        time: np.ndarray, delta_time: float, simulation_time: float):
+
+    vehicle_speed = 15.0
+    curve_yaw_rate = math.pi / 5.0
+    curve_timing = 2.0
+
+    yaw_ref = math.pi
+
+    x_sequence = np.zeros((len(time), 1))
+    y_sequence = np.zeros((len(time), 1))
+    theta_sequence = np.zeros((len(time), 1))
+    r_sequence = np.zeros((len(time), 1))
+    V_sequence = np.zeros((len(time), 1))
+
+    for i in range(len(time)):
+        if time[i] < curve_timing:
+            x_sequence[i, 0] = x_sequence[i - 1, 0] + \
+                vehicle_speed * delta_time
+            y_sequence[i, 0] = 0.0
+            theta_sequence[i, 0] = 0.0
+            r_sequence[i, 0] = 0.0
+            V_sequence[i, 0] = vehicle_speed
+
+        elif time[i] > curve_timing and theta_sequence[i - 1, 0] < yaw_ref:
+            x_sequence[i, 0] = x_sequence[i - 1, 0] + \
+                vehicle_speed * delta_time * math.cos(theta_sequence[i - 1, 0])
+            y_sequence[i, 0] = y_sequence[i - 1, 0] + \
+                vehicle_speed * delta_time * math.sin(theta_sequence[i - 1, 0])
+            theta_sequence[i, 0] = theta_sequence[i - 1, 0] + \
+                curve_yaw_rate * delta_time
+            if theta_sequence[i, 0] > yaw_ref:
+                theta_sequence[i, 0] = yaw_ref
+
+            r_sequence[i, 0] = curve_yaw_rate
+            V_sequence[i, 0] = vehicle_speed
+        else:
+            x_sequence[i, 0] = x_sequence[i - 1, 0] + \
+                vehicle_speed * delta_time * math.cos(theta_sequence[i - 1, 0])
+            y_sequence[i, 0] = y_sequence[i - 1, 0] + \
+                vehicle_speed * delta_time * math.sin(theta_sequence[i - 1, 0])
+            theta_sequence[i, 0] = theta_sequence[i - 1, 0]
+
+            r_sequence[i, 0] = 0.0
+            V_sequence[i, 0] = vehicle_speed
+
+    return x_sequence, y_sequence, theta_sequence, r_sequence, V_sequence
+
+
 @dataclass
 class Parameter:
     m: float = 2000
@@ -130,7 +180,7 @@ def main():
     Weight_U = np.array([0.1, 0.1])
     Weight_Y = np.array([1.0, 1.0, 0.01, 0.01, 1.0])
 
-    X_initial = np.array([[0.0], [0.0], [0.0], [0.0], [0.0], [1.0]])
+    X_initial = np.array([[0.0], [0.0], [0.0], [0.0], [0.0], [10.0]])
 
     Np = 16
     Nc = 1
@@ -153,19 +203,13 @@ def main():
         Number_of_Delay=0)
 
     # X: px, py, theta, r, beta, V
-    x_true = np.array([[0.0], [0.0], [0.0], [0.0], [0.0], [1.0]])
+    x_true = np.array([[0.0], [0.0], [0.0], [0.0], [0.0], [10.0]])
     # U: delta, accel
     u = np.array([[0.0], [0.0]])
 
     # create reference
-    vehicle_speed = 2.0
-    x_sequence = np.zeros((len(time), 1))
-    for i in range(len(time)):
-        if i == 0:
-            x_sequence[i, 0] = x_true[0, 0] + vehicle_speed * sim_delta_time
-        else:
-            x_sequence[i, 0] = x_sequence[i - 1, 0] + \
-                vehicle_speed * sim_delta_time
+    x_sequence, y_sequence, theta_sequence, r_sequence, V_sequence = \
+        create_reference(time, sim_delta_time, simulation_time)
 
     plotter = SimulationPlotter()
 
@@ -189,8 +233,13 @@ def main():
         y_measured = y_store[delay_index]
 
         # controller
-        ref = np.array([[x_sequence[i, 0]], [0.0], [
-                       0.0], [0.0], [vehicle_speed]])
+        ref = np.array([
+            [x_sequence[i, 0]],
+            [y_sequence[i, 0]],
+            [theta_sequence[i, 0]],
+            [r_sequence[i, 0]],
+            [V_sequence[i, 0]]
+        ])
 
         u = ada_mpc.update_manipulation(ref, y_measured)
 
