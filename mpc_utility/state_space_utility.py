@@ -437,17 +437,3 @@ class MPC_ReferenceTrajectory:
                         Fx[i * self.OUTPUT_SIZE + j, :]
 
         return dif
-
-
-class Adaptive_MPC_StateSpaceInitializer:
-    def __init__(self, fxu_function,
-                 fxu_jacobian_X_function,
-                 fxu_jacobian_U_function,
-                 hx_function,
-                 hx_jacobian_function):
-
-        self.fxu_function = fxu_function
-        self.fxu_jacobian_X_function = fxu_jacobian_X_function
-        self.fxu_jacobian_U_function = fxu_jacobian_U_function
-        self.hx_function = hx_function
-        self.hx_jacobian_function = hx_jacobian_function

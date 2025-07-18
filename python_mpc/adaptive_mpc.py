@@ -11,7 +11,7 @@ from mpc_utility.state_space_utility import MPC_PredictionMatrices
 from mpc_utility.state_space_utility import MPC_ReferenceTrajectory
 
 from mpc_utility.linear_solver_utility import LMPC_QP_Solver
-from mpc_utility.state_space_utility import Adaptive_MPC_StateSpaceInitializer
+from mpc_utility.state_space_utility_deploy import Adaptive_MPC_StateSpaceInitializer
 
 from external_libraries.MCAP_python_control.python_control.kalman_filter import ExtendedKalmanFilter
 from external_libraries.MCAP_python_control.python_control.kalman_filter import DelayedVectorObject
@@ -111,6 +111,31 @@ class AdaptiveMPC_NoConstraints:
         # Embedded Integrator
         self.augmented_ss = self._generate_state_space_embedded_integrator()
 
+        if Nc > Np:
+            raise ValueError("Nc must be less than or equal to Np.")
+        self.Np = Np
+        self.Nc = Nc
+
+        self.Weight_U_Nc = self.update_weight(Weight_U)
+
+        # self.state_space_initializer.generate_prediction_matrices_phi_f(
+        #     Np=Np,
+        #     Nc=Nc,
+        #     state_space=self.augmented_ss)
+
+        self.prediction_matrices = self._create_prediction_matrices()
+
+        self.solver_factor = np.zeros(
+            (self.AUGMENTED_INPUT_SIZE * self.Nc,
+             self.AUGMENTED_OUTPUT_SIZE * self.Np))
+        self.update_solver_factor(
+            self.prediction_matrices.Phi_ndarray, self.Weight_U_Nc)
+
+        self.Y_store = DelayedVectorObject(self.AUGMENTED_OUTPUT_SIZE,
+                                           self.Number_of_Delay)
+
+        self.is_ref_trajectory = is_ref_trajectory
+
     def initialize_kalman_filter(self,
                                  X: sp.Matrix, U: sp.Matrix, Y: sp.Matrix,
                                  fxu: sp.Matrix, fxu_jacobian_X: sp.Matrix,
@@ -193,4 +218,47 @@ class AdaptiveMPC_NoConstraints:
 
         augmented_ss = StateSpaceEmbeddedIntegrator(state_space)
 
+        self.AUGMENTED_INPUT_SIZE = augmented_ss.B.shape[1]
+        if self.AUGMENTED_INPUT_SIZE != state_space.B.shape[1]:
+            raise ValueError(
+                "the augmented state space input must have the same size of state_space.B.")
+        self.AUGMENTED_OUTPUT_SIZE = augmented_ss.C.shape[0]
+        if self.AUGMENTED_OUTPUT_SIZE != state_space.C.shape[0]:
+            raise ValueError(
+                "the augmented state space output must have the same size of state_space.C.")
+
         return augmented_ss
+
+    def update_weight(self, Weight: np.ndarray):
+
+        return np.diag(np.tile(Weight, (self.Nc, 1)).flatten())
+
+    def _create_prediction_matrices(self) -> MPC_PredictionMatrices:
+
+        prediction_matrices = MPC_PredictionMatrices(
+            Np=self.Np,
+            Nc=self.Nc,
+            INPUT_SIZE=self.AUGMENTED_INPUT_SIZE,
+            STATE_SIZE=self.AUGMENTED_STATE_SIZE,
+            OUTPUT_SIZE=self.AUGMENTED_OUTPUT_SIZE)
+
+        # if (0 == len(self.augmented_ss.A.free_symbols)) and \
+        #         (0 == len(self.augmented_ss.B.free_symbols)) and \
+        #         (0 == len(self.augmented_ss.C.free_symbols)):
+        #     raise ValueError("State space model must be symbolic.")
+
+        # self.state_space_initializer.generate_LTV_MPC_Phi_F_Updater()
+
+        # prediction_matrices.Phi_F_updater_function = \
+        #     self.state_space_initializer.LTV_MPC_Phi_F_updater_function
+
+        # prediction_matrices.update_Phi_F_runtime(
+        #     parameters_struct=self.parameters_struct)
+
+        return prediction_matrices
+
+    def update_solver_factor(self, Phi: np.ndarray, Weight_U_Nc: np.ndarray):
+        if (Phi.shape[1] != Weight_U_Nc.shape[0]) or (Phi.shape[1] != Weight_U_Nc.shape[1]):
+            raise ValueError("Weight must have compatible dimensions.")
+
+        self.solver_factor = np.linalg.solve(Phi.T @ Phi + Weight_U_Nc, Phi.T)
