@@ -147,6 +147,14 @@ def main():
     u = np.array([[0.0], [0.0]])
 
     # create reference
+    vehicle_speed = 2.0
+    x_sequence = np.zeros((len(time), 1))
+    for i in range(len(time)):
+        if i == 0:
+            x_sequence[i, 0] = x_true[0, 0] + vehicle_speed * sim_delta_time
+        else:
+            x_sequence[i, 0] = x_sequence[i - 1, 0] + \
+                vehicle_speed * sim_delta_time
 
     plotter = SimulationPlotter()
 
@@ -170,9 +178,51 @@ def main():
         y_measured = y_store[delay_index]
 
         # controller
-        ref = np.array([[0.01], [0.0], [0.0], [0.0], [1.0]])
+        ref = np.array([[x_sequence[i, 0]], [0.0], [
+                       0.0], [0.0], [vehicle_speed]])
 
-        U = ada_mpc.update_manipulation(ref, y_measured)
+        u = ada_mpc.update_manipulation(ref, y_measured)
+
+        plotter.append_name(x_true, "x_true")
+        plotter.append_name(ref, "ref")
+        plotter.append_name(y_measured, "y_measured")
+        plotter.append_name(u, "u")
+
+    # plot
+    plotter.assign("x_true", column=0, row=0, position=(0, 0),
+                   x_sequence=time, label="px_true")
+    plotter.assign("ref", column=0, row=0, position=(0, 0),
+                   x_sequence=time, label="px_ref")
+
+    plotter.assign("x_true", column=1, row=0, position=(1, 0),
+                   x_sequence=time, label="py_true")
+    plotter.assign("ref", column=1, row=0, position=(1, 0),
+                   x_sequence=time, label="py_ref")
+
+    plotter.assign("x_true", column=2, row=0, position=(2, 0),
+                   x_sequence=time, label="theta_true")
+    plotter.assign("ref", column=2, row=0, position=(2, 0),
+                   x_sequence=time, label="theta_ref")
+
+    plotter.assign("x_true", column=3, row=0, position=(0, 1),
+                   x_sequence=time, label="r_true")
+    plotter.assign("ref", column=3, row=0, position=(0, 1),
+                   x_sequence=time, label="r_ref")
+
+    plotter.assign("x_true", column=4, row=0, position=(1, 1),
+                   x_sequence=time, label="beta_true")
+
+    plotter.assign("x_true", column=5, row=0, position=(2, 1),
+                   x_sequence=time, label="V_true")
+    plotter.assign("ref", column=4, row=0, position=(2, 1),
+                   x_sequence=time, label="V_ref")
+
+    plotter.assign("u", column=0, row=0, position=(0, 2),
+                   x_sequence=time, label="delta")
+    plotter.assign("u", column=1, row=0, position=(1, 2),
+                   x_sequence=time, label="a")
+
+    plotter.plot()
 
 
 if __name__ == "__main__":
