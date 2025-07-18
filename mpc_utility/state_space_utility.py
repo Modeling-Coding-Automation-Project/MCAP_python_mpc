@@ -339,6 +339,19 @@ class MPC_PredictionMatrices:
             self.Phi_ndarray = Phi
             self.F_ndarray = F
 
+    def update_Phi_F_adaptive_runtime(
+            self, parameters_struct,
+            X, U):
+
+        pass
+
+        # if self.Phi_F_updater_function is not None:
+        #     Phi, F = self.Phi_F_updater_function(
+        #         parameters_struct=parameters_struct)
+
+        #     self.Phi_ndarray = Phi
+        #     self.F_ndarray = F
+
     def _generate_exponential_A_list(self, A: sp.Matrix):
 
         exponential_A_list = []

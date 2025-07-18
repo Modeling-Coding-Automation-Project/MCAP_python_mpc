@@ -718,14 +718,14 @@ class Adaptive_MPC_StateSpaceInitializer:
         self.Adaptive_MPC_Phi_F_function_generated = False
 
     def generate_initial_embedded_integrator(
-            self, X, U, Y,
+            self, X, U,
             parameters_struct,
             state_space: StateSpaceEmbeddedIntegrator = None,
             file_name: str = EMBEDDED_INTEGRATOR_UPDATER_FILE_NAME):
 
-        # merge parameters and X, U, Y
+        # merge parameters and X, U
         free_symbols = set()
-        for mat in [X, U, Y]:
+        for mat in [X, U]:
             free_symbols.update(mat.free_symbols)
         symbol_names = [str(s) for s in free_symbols]
 

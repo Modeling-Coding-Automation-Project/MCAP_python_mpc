@@ -119,7 +119,7 @@ class AdaptiveMPC_NoConstraints:
         )
 
         self.state_space_initializer.generate_initial_embedded_integrator(
-            X=X, U=U, Y=Y,
+            X=X, U=U,
             parameters_struct=self.parameters_struct,
             state_space=self.augmented_ss)
 
@@ -263,11 +263,12 @@ class AdaptiveMPC_NoConstraints:
 
         self.state_space_initializer.generate_Adaptive_MPC_Phi_F_Updater()
 
-        # prediction_matrices.Phi_F_updater_function = \
-        #     self.state_space_initializer.LTV_MPC_Phi_F_updater_function
+        prediction_matrices.Phi_F_updater_function = \
+            self.state_space_initializer.Adaptive_MPC_Phi_F_updater_function
 
-        # prediction_matrices.update_Phi_F_runtime(
-        #     parameters_struct=self.parameters_struct)
+        prediction_matrices.update_Phi_F_adaptive_runtime(
+            parameters_struct=self.parameters_struct,
+            X=self.X_inner_model, U=self.U_latest)
 
         return prediction_matrices
 
