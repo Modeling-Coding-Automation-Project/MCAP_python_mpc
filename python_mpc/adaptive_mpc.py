@@ -128,8 +128,8 @@ class AdaptiveMPC_NoConstraints:
         self.solver_factor = np.zeros(
             (self.AUGMENTED_INPUT_SIZE * self.Nc,
              self.AUGMENTED_OUTPUT_SIZE * self.Np))
-        self.update_solver_factor(
-            self.prediction_matrices.Phi_ndarray, self.Weight_U_Nc)
+        # self.update_solver_factor(
+        #     self.prediction_matrices.Phi_ndarray, self.Weight_U_Nc)
 
         self.Y_store = DelayedVectorObject(self.AUGMENTED_OUTPUT_SIZE,
                                            self.Number_of_Delay)
@@ -242,12 +242,7 @@ class AdaptiveMPC_NoConstraints:
             STATE_SIZE=self.AUGMENTED_STATE_SIZE,
             OUTPUT_SIZE=self.AUGMENTED_OUTPUT_SIZE)
 
-        # if (0 == len(self.augmented_ss.A.free_symbols)) and \
-        #         (0 == len(self.augmented_ss.B.free_symbols)) and \
-        #         (0 == len(self.augmented_ss.C.free_symbols)):
-        #     raise ValueError("State space model must be symbolic.")
-
-        # self.state_space_initializer.generate_LTV_MPC_Phi_F_Updater()
+        self.state_space_initializer.generate_Adaptive_MPC_Phi_F_Updater()
 
         # prediction_matrices.Phi_F_updater_function = \
         #     self.state_space_initializer.LTV_MPC_Phi_F_updater_function

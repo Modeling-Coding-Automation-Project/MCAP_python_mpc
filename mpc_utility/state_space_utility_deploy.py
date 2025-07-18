@@ -13,6 +13,8 @@ EMBEDDED_INTEGRATOR_UPDATER_FILE_NAME = "mpc_embedded_integrator_state_space_upd
 PREDICTION_MATRICES_PHI_F_UPDATER_FILE_NAME = "prediction_matrices_phi_f_updater.py"
 LTV_MPC_PHI_F_UPDATER_FILE_NAME = "ltv_mpc_phi_f_updater.py"
 
+ADAPTIVE_MPC_PHI_F_UPDATER_FILE_NAME = "adaptive_mpc_phi_f_updater.py"
+
 MPC_STATE_SPACE_UPDATER_FILE_NAME_NO_EXTENSION = \
     MPC_STATE_SPACE_UPDATER_FILE_NAME.split(".")[0]
 EMBEDDED_INTEGRATOR_UPDATER_FILE_NAME_NO_EXTENSION = \
@@ -684,3 +686,7 @@ class Adaptive_MPC_StateSpaceInitializer:
         self.fxu_jacobian_U_function = fxu_jacobian_U_function
         self.hx_function = hx_function
         self.hx_jacobian_function = hx_jacobian_function
+
+    def generate_Adaptive_MPC_Phi_F_Updater(
+            self, file_name: str = ADAPTIVE_MPC_PHI_F_UPDATER_FILE_NAME):
+        pass
