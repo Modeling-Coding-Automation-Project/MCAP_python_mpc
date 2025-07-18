@@ -341,7 +341,7 @@ class MPC_PredictionMatrices:
 
     def update_Phi_F_adaptive_runtime(
             self, parameters_struct,
-            X, U):
+            X: np.ndarray, U: np.ndarray):
 
         pass
 
