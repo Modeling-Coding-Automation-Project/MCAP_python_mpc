@@ -75,9 +75,12 @@ class AdaptiveMPC_NoConstraints:
             self.parameters_X_U_struct = self.create_parameters_struct(
                 parameters_struct, X, U)
 
-        # X, U symbolic
+        # remember X, U, A, B, C symbolic matrices
         self.X_symbolic = X
         self.U_symbolic = U
+        self.A_symbolic = fxu_jacobian_X
+        self.B_symbolic = fxu_jacobian_U
+        self.C_symbolic = hx_jacobian
 
         # initialize state
         self.X_inner_model = X_initial
