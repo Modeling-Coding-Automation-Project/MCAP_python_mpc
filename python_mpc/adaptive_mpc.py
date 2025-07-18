@@ -75,6 +75,10 @@ class AdaptiveMPC_NoConstraints:
             self.parameters_X_U_struct = self.create_parameters_struct(
                 parameters_struct, X, U)
 
+        # X, U symbolic
+        self.X_symbolic = X
+        self.U_symbolic = U
+
         # initialize state
         self.X_inner_model = X_initial
 
@@ -292,7 +296,9 @@ class AdaptiveMPC_NoConstraints:
 
         prediction_matrices.update_Phi_F_adaptive_runtime(
             parameters_struct=self.parameters_struct,
-            X=self.X_inner_model, U=self.U_latest)
+            parameters_X_U_struct=self.parameters_X_U_struct,
+            X_symbolic=self.X_symbolic, U_symbolic=self.U_symbolic,
+            X_ndarray=self.X_inner_model, U_ndarray=self.U_latest)
 
         return prediction_matrices
 

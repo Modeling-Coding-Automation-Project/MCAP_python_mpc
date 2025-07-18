@@ -340,17 +340,29 @@ class MPC_PredictionMatrices:
             self.F_ndarray = F
 
     def update_Phi_F_adaptive_runtime(
-            self, parameters_struct,
-            X: np.ndarray, U: np.ndarray):
+            self, parameters_struct, parameters_X_U_struct,
+            X_symbolic: sp.Matrix, U_symbolic: sp.Matrix,
+            X_ndarray: np.ndarray, U_ndarray: np.ndarray):
 
-        pass
+        for field in vars(type(parameters_struct)):
+            if not field.startswith('__'):
+                value = getattr(parameters_struct, field)
+                setattr(parameters_X_U_struct, field, value)
 
-        # if self.Phi_F_updater_function is not None:
-        #     Phi, F = self.Phi_F_updater_function(
-        #         parameters_struct=parameters_struct)
+        for i in range(X_symbolic.shape[0]):
+            symbol_name = str(X_symbolic[i, 0])
+            setattr(parameters_X_U_struct, symbol_name, float(X_ndarray[i, 0]))
 
-        #     self.Phi_ndarray = Phi
-        #     self.F_ndarray = F
+        for i in range(U_symbolic.shape[0]):
+            symbol_name = str(U_symbolic[i, 0])
+            setattr(parameters_X_U_struct, symbol_name, float(U_ndarray[i, 0]))
+
+        if self.Phi_F_updater_function is not None:
+            Phi, F = self.Phi_F_updater_function(
+                parameters_struct=parameters_X_U_struct)
+
+            self.Phi_ndarray = Phi
+            self.F_ndarray = F
 
     def _generate_exponential_A_list(self, A: sp.Matrix):
 
