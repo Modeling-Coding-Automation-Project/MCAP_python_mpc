@@ -3,7 +3,7 @@ import inspect
 import numpy as np
 import sympy as sp
 import control
-from dataclasses import is_dataclass
+from dataclasses import is_dataclass, fields, make_dataclass
 
 from mpc_utility.state_space_utility import SymbolicStateSpace
 from mpc_utility.state_space_utility import StateSpaceEmbeddedIntegrator
@@ -71,7 +71,9 @@ class AdaptiveMPC_NoConstraints:
             raise ValueError(
                 "parameters_struct must be a dataclass instance.")
 
-        self.parameters_struct = parameters_struct
+        self.parameters_struct, \
+            self.parameters_X_U_struct = self.create_parameters_struct(
+                parameters_struct, X, U)
 
         # initialize state
         self.X_inner_model = X_initial
@@ -119,8 +121,7 @@ class AdaptiveMPC_NoConstraints:
         )
 
         self.state_space_initializer.generate_initial_embedded_integrator(
-            X=X, U=U,
-            parameters_struct=self.parameters_struct,
+            parameters_X_U_struct=self.parameters_X_U_struct,
             state_space=self.augmented_ss)
 
         if Nc > Np:
@@ -147,6 +148,29 @@ class AdaptiveMPC_NoConstraints:
                                            self.Number_of_Delay)
 
         self.is_ref_trajectory = is_ref_trajectory
+
+    def create_parameters_struct(self, parameters, X, U):
+        parameters_struct = parameters
+
+        # merge parameters and X, U
+        free_symbols = set()
+        for mat in [X, U]:
+            free_symbols.update(mat.free_symbols)
+        symbol_names = [str(s) for s in free_symbols]
+
+        param_names = [k for k in vars(
+            type(parameters_struct)) if not k.startswith('__')]
+
+        existing_fields = [(f.name, f.type, f)
+                           for f in fields(parameters_struct)]
+        new_fields = [(name, float, 0.0)
+                      for name in symbol_names if name not in param_names]
+
+        PXU_Struct = make_dataclass(
+            "PXU_Struct", existing_fields + new_fields)
+        parameters_X_U_struct = PXU_Struct(**vars(parameters_struct))
+
+        return parameters_struct, parameters_X_U_struct
 
     def initialize_kalman_filter(self,
                                  X: sp.Matrix, U: sp.Matrix, Y: sp.Matrix,
