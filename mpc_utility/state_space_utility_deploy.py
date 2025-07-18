@@ -316,6 +316,18 @@ class StateSpaceUpdaterDeploy:
 
 
 class LTV_MPC_StateSpaceInitializer:
+    """
+    A utility class for generating and managing state-space matrices and prediction matrices
+    for Linear Time-Varying Model Predictive Control (LTV-MPC) systems.
+    This class provides methods to:
+        - Dynamically generate Python code for updating state-space matrices (A, B, C, D)
+          based on user-provided parameters.
+        - Write and import updater modules for state-space and embedded integrator models.
+        - Generate and manage prediction matrices (Phi, F) for MPC horizons.
+        - Compose updaters for LTV-MPC prediction matrices using embedded integrator and
+          prediction matrix updaters.
+    """
+
     def __init__(self, caller_file_name_without_ext: str = None):
 
         self.file_name_suffix = ""

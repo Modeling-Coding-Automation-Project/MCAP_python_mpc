@@ -27,6 +27,7 @@ class AdaptiveMPC_NoConstraints:
                  Np: int, Nc: int,
                  Weight_U: np.ndarray, Weight_Y: np.ndarray,
                  Q_kf: np.ndarray = None, R_kf: np.ndarray = None,
+                 Number_of_Delay: int = 0,
                  is_ref_trajectory: bool = False,
                  caller_file_name: str = None):
 
@@ -51,8 +52,25 @@ class AdaptiveMPC_NoConstraints:
             caller_file_name_without_ext = os.path.splitext(caller_file_name)[
                 0]
 
+        # Check compatibility
+        if delta_time <= 0.0:
+            raise ValueError("State space model must be discrete-time.")
+
+        self.delta_time = delta_time
+        self.Number_of_Delay = Number_of_Delay
+
+        if (Np < self.Number_of_Delay):
+            raise ValueError(
+                "Prediction horizon Np must be greater than the number of delays.")
+
+        if not is_dataclass(parameters_struct):
+            raise ValueError(
+                "parameters_struct must be a dataclass instance.")
+
+        self.parameters_struct = parameters_struct
+
         # create EKF object
-        self.ekf, self.fxu_file_name, self.fxu_jacobian_file_name, \
+        self.kalman_filter, self.fxu_file_name, self.fxu_jacobian_file_name, \
             self.hx_file_name, self.hx_jacobian_file_name \
             = self.initialize_kalman_filter(
                 X=X, U=U, Y=Y,
@@ -99,7 +117,7 @@ class AdaptiveMPC_NoConstraints:
         hx_script_function = local_vars["hx_script_function"]
         hx_jacobian_script_function = local_vars["hx_jacobian_script_function"]
 
-        ekf = ExtendedKalmanFilter(
+        kalman_filter = ExtendedKalmanFilter(
             state_function=fxu_script_function,
             state_function_jacobian=fxu_jacobian_script_function,
             measurement_function=hx_script_function,
@@ -109,5 +127,5 @@ class AdaptiveMPC_NoConstraints:
             Parameters=parameters_struct
         )
 
-        return ekf, fxu_file_name, fxu_jacobian_file_name, \
+        return kalman_filter, fxu_file_name, fxu_jacobian_file_name, \
             hx_file_name, hx_jacobian_file_name
