@@ -71,9 +71,8 @@ class AdaptiveMPC_NoConstraints:
             raise ValueError(
                 "parameters_struct must be a dataclass instance.")
 
-        self.parameters_struct, \
-            self.parameters_X_U_struct = self.create_parameters_struct(
-                parameters_struct, X, U)
+        self.parameters_X_U_struct = self.create_parameters_X_U_struct(
+            parameters_struct, X, U)
 
         # remember X, U, A, B, C symbolic matrices
         self.X_symbolic = X
@@ -156,10 +155,9 @@ class AdaptiveMPC_NoConstraints:
 
         self.is_ref_trajectory = is_ref_trajectory
 
-    def create_parameters_struct(
-            self, parameters,
+    def create_parameters_X_U_struct(
+            self, parameters_struct,
             X: sp.Matrix, U: sp.Matrix):
-        parameters_struct = parameters
 
         # merge parameters and X, U
         free_symbols = set()
@@ -179,7 +177,7 @@ class AdaptiveMPC_NoConstraints:
             "PXU_Struct", existing_fields + new_fields)
         parameters_X_U_struct = PXU_Struct(**vars(parameters_struct))
 
-        return parameters_struct, parameters_X_U_struct
+        return parameters_X_U_struct
 
     def initialize_kalman_filter(self,
                                  X: sp.Matrix, U: sp.Matrix, Y: sp.Matrix,
@@ -300,21 +298,33 @@ class AdaptiveMPC_NoConstraints:
             self.state_space_initializer.Adaptive_MPC_Phi_F_updater_function
 
         prediction_matrices.update_Phi_F_adaptive_runtime(
-            parameters_struct=self.parameters_struct,
+            parameters_struct=self.kalman_filter.Parameters,
             parameters_X_U_struct=self.parameters_X_U_struct,
-            X_symbolic=self.X_symbolic, U_symbolic=self.U_symbolic,
-            X_ndarray=self.X_inner_model, U_ndarray=self.U_latest)
+            X_symbolic=self.X_symbolic,
+            U_symbolic=self.U_symbolic,
+            X_ndarray=self.X_inner_model,
+            U_ndarray=self.U_latest)
 
         return prediction_matrices
 
-    def create_reference_trajectory(self, reference_trajectory: np.ndarray):
+    def create_reference_trajectory(
+            self,
+            reference_trajectory: np.ndarray,
+            Y: np.ndarray):
+
         if self.is_ref_trajectory:
             if not ((reference_trajectory.shape[1] == self.Np) or
                     (reference_trajectory.shape[1] == 1)):
                 raise ValueError(
                     "Reference vector must be either a single row vector or a Np row vectors.")
 
-        trajectory = MPC_ReferenceTrajectory(reference_trajectory, self.Np)
+        reference_trajectory_dif = np.zeros_like(reference_trajectory)
+        for i in range(reference_trajectory.shape[0]):
+            for j in range(reference_trajectory.shape[1]):
+                reference_trajectory_dif[i, j] = \
+                    reference_trajectory[i, j] - Y[i, 0]
+
+        trajectory = MPC_ReferenceTrajectory(reference_trajectory_dif, self.Np)
 
         return trajectory
 
@@ -350,20 +360,13 @@ class AdaptiveMPC_NoConstraints:
 
             return X, (Y + Y_diff)
         else:
+            # This is for calculating y difference
+            self.Y_store.push(Y)
             return X, Y
 
     def update_parameters(self, parameters_struct):
 
         self.kalman_filter.Parameters = parameters_struct
-
-        self.prediction_matrices.update_Phi_F_adaptive_runtime(
-            parameters_struct=parameters_struct,
-            parameters_X_U_struct=self.parameters_X_U_struct,
-            X_symbolic=self.X_symbolic, U_symbolic=self.U_symbolic,
-            X_ndarray=self.X_inner_model, U_ndarray=self.U_latest)
-
-        self.update_solver_factor(
-            self.prediction_matrices.Phi_ndarray, self.Weight_U_Nc)
 
     def update_manipulation(self, reference: np.ndarray, Y: np.ndarray):
 
@@ -372,10 +375,23 @@ class AdaptiveMPC_NoConstraints:
         X = self.kalman_filter.x_hat
         X_compensated, Y_compensated = self.compensate_X_Y_delay(X, Y)
 
-        delta_X = X_compensated - self.X_inner_model
-        X_augmented = np.vstack((delta_X, Y_compensated))
+        self.prediction_matrices.update_Phi_F_adaptive_runtime(
+            parameters_struct=self.kalman_filter.Parameters,
+            parameters_X_U_struct=self.parameters_X_U_struct,
+            X_symbolic=self.X_symbolic,
+            U_symbolic=self.U_symbolic,
+            X_ndarray=X_compensated,
+            U_ndarray=self.U_latest)
 
-        reference_trajectory = self.create_reference_trajectory(reference)
+        self.update_solver_factor(
+            self.prediction_matrices.Phi_ndarray, self.Weight_U_Nc)
+
+        delta_X = X_compensated - self.X_inner_model
+        delta_Y = Y_compensated - self.Y_store.get()
+        X_augmented = np.vstack((delta_X, delta_Y))
+
+        reference_trajectory = self.create_reference_trajectory(
+            reference, self.Y_store.get())
 
         delta_U = self.solve(reference_trajectory, X_augmented)
 

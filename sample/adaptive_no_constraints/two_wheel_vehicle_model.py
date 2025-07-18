@@ -150,8 +150,8 @@ def main():
 
     plotter = SimulationPlotter()
 
-    y_measured = Y
-    y_store = [Y] * (Number_of_Delay + 1)
+    y_measured = np.array([[0.0], [0.0], [0.0], [0.0], [0.0]])
+    y_store = [y_measured] * (Number_of_Delay + 1)
     delay_index = 0
 
     # simulation
@@ -159,7 +159,7 @@ def main():
         # system response
         x_true = ada_mpc.state_space_initializer.fxu_function(
             x_true, u, parameters_ekf)
-        y_measured = ada_mpc.state_space_initializer.hx_function(
+        y_store[delay_index] = ada_mpc.state_space_initializer.hx_function(
             x_true, parameters_ekf)
 
         # system delay
@@ -168,6 +168,11 @@ def main():
             delay_index = 0
 
         y_measured = y_store[delay_index]
+
+        # controller
+        ref = np.array([[0.01], [0.0], [0.0], [0.0], [1.0]])
+
+        U = ada_mpc.update_manipulation(ref, y_measured)
 
 
 if __name__ == "__main__":
