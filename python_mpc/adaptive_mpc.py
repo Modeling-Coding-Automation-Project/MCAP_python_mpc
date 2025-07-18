@@ -99,7 +99,8 @@ class AdaptiveMPC_NoConstraints:
         # state space initialization
         self.fxu_jacobian_U_script_function, \
             self.fxu_jacobian_U_file_name = \
-            self.generate_fxu_jacobian_U_function(fxu_jacobian_U, X, U)
+            self.generate_fxu_jacobian_U_function(
+                fxu_jacobian_U, X, U, caller_file_name_without_ext)
 
         self.state_space_initializer = Adaptive_MPC_StateSpaceInitializer(
             fxu_function=self.kalman_filter.state_function,
@@ -111,7 +112,11 @@ class AdaptiveMPC_NoConstraints:
         )
 
         # Embedded Integrator
-        self.augmented_ss = self._generate_state_space_embedded_integrator()
+        self.augmented_ss = self._generate_state_space_embedded_integrator(
+            fxu_jacobian_X=fxu_jacobian_X,
+            fxu_jacobian_U=fxu_jacobian_U,
+            hx_jacobian=hx_jacobian
+        )
 
         if Nc > Np:
             raise ValueError("Nc must be less than or equal to Np.")
@@ -188,10 +193,12 @@ class AdaptiveMPC_NoConstraints:
         return kalman_filter, fxu_file_name, fxu_jacobian_X_file_name, \
             hx_file_name, hx_jacobian_file_name
 
-    def generate_fxu_jacobian_U_function(self, fxu_jacobian_U: sp.Matrix,
-                                         X: sp.Matrix, U: sp.Matrix):
+    def generate_fxu_jacobian_U_function(
+            self, fxu_jacobian_U: sp.Matrix,
+            X: sp.Matrix, U: sp.Matrix,
+            file_name_without_ext: str):
         fxu_jacobian_U_file_name = ExpressionDeploy.write_state_function_code_from_sympy(
-            fxu_jacobian_U, X, U)
+            fxu_jacobian_U, X, U, file_name_without_ext)
 
         local_vars = {}
 
@@ -201,18 +208,16 @@ class AdaptiveMPC_NoConstraints:
 
         return fxu_jacobian_U_script_function, fxu_jacobian_U_file_name
 
-    def _generate_state_space_embedded_integrator(self):
-        A = self.state_space_initializer.fxu_jacobian_X_function(
-            self.X_inner_model, self.U_latest, self.parameters_struct)
-        A = sp.Matrix(A)
+    def _generate_state_space_embedded_integrator(
+            self,
+            fxu_jacobian_X: sp.Matrix,
+            fxu_jacobian_U: sp.Matrix,
+            hx_jacobian: sp.Matrix
+    ) -> StateSpaceEmbeddedIntegrator:
 
-        B = self.state_space_initializer.fxu_jacobian_U_function(
-            self.X_inner_model, self.U_latest, self.parameters_struct)
-        B = sp.Matrix(B)
-
-        C = self.state_space_initializer.hx_jacobian_function(
-            self.X_inner_model, self.parameters_struct)
-        C = sp.Matrix(C)
+        A = sp.Matrix(fxu_jacobian_X)
+        B = sp.Matrix(fxu_jacobian_U)
+        C = sp.Matrix(hx_jacobian)
 
         state_space = SymbolicStateSpace(
             A, B, C,
@@ -221,11 +226,17 @@ class AdaptiveMPC_NoConstraints:
 
         augmented_ss = StateSpaceEmbeddedIntegrator(state_space)
 
-        self.AUGMENTED_INPUT_SIZE = augmented_ss.B.shape[1]
+        # Check dimensions
+        if self.AUGMENTED_INPUT_SIZE != augmented_ss.B.shape[1]:
+            raise ValueError(
+                "the augmented state space input must have the same size of state_space.B.")
         if self.AUGMENTED_INPUT_SIZE != state_space.B.shape[1]:
             raise ValueError(
                 "the augmented state space input must have the same size of state_space.B.")
-        self.AUGMENTED_OUTPUT_SIZE = augmented_ss.C.shape[0]
+
+        if self.AUGMENTED_OUTPUT_SIZE != augmented_ss.C.shape[0]:
+            raise ValueError(
+                "the augmented state space state must have the same size of state_space.A.")
         if self.AUGMENTED_OUTPUT_SIZE != state_space.C.shape[0]:
             raise ValueError(
                 "the augmented state space output must have the same size of state_space.C.")
