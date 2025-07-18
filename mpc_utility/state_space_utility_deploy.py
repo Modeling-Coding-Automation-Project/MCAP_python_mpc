@@ -13,6 +13,7 @@ MPC_STATE_SPACE_UPDATER_FILE_NAME = "mpc_state_space_updater.py"
 EMBEDDED_INTEGRATOR_UPDATER_FILE_NAME = "mpc_embedded_integrator_state_space_updater.py"
 PREDICTION_MATRICES_PHI_F_UPDATER_FILE_NAME = "prediction_matrices_phi_f_updater.py"
 LTV_MPC_PHI_F_UPDATER_FILE_NAME = "ltv_mpc_phi_f_updater.py"
+ADAPTIVE_MPC_PHI_F_UPDATER_FILE_NAME = "adaptive_mpc_phi_f_updater.py"
 
 ADAPTIVE_MPC_PHI_F_UPDATER_FILE_NAME = "adaptive_mpc_phi_f_updater.py"
 
@@ -29,6 +30,7 @@ MPC_STATE_SPACE_UPDATER_CLASS_NAME = "MPC_StateSpace_Updater"
 EMBEDDED_INTEGRATOR_UPDATER_CLASS_NAME = "EmbeddedIntegrator_Updater"
 PREDICTION_MATRICES_PHI_F_UPDATER_CLASS_NAME = "PredictionMatricesPhiF_Updater"
 LTV_MPC_PHI_F_UPDATER_CLASS_NAME = "LTV_MPC_Phi_F_Updater"
+ADAPTIVE_MPC_PHI_F_UPDATER_CLASS_NAME = "Adaptive_MPC_Phi_F_Updater"
 
 A_UPDATER_FUNCTION_NAME = "update_A"
 B_UPDATER_FUNCTION_NAME = "update_B"
@@ -38,6 +40,7 @@ MPC_STATE_SPACE_UPDATER_FUNCTION_NAME = "update"
 EMBEDDED_INTEGRATOR_UPDATER_FUNCTION_NAME = "update"
 PREDICTION_MATRICES_PHI_F_UPDATER_FUNCTION_NAME = "update"
 LTV_MPC_PHI_F_UPDATER_FUNCTION_NAME = "update"
+ADAPTIVE_MPC_PHI_F_UPDATER_FUNCTION_NAME = "update"
 
 A_UPDATER_CLASS_NAME = "A_Updater"
 B_UPDATER_CLASS_NAME = "B_Updater"
@@ -711,6 +714,9 @@ class Adaptive_MPC_StateSpaceInitializer:
         self.embedded_integrator_updater_file_name = ""
         self.embedded_integrator_ABC_function_generated = False
 
+        self.Adaptive_MPC_Phi_F_updater_file_name = ""
+        self.Adaptive_MPC_Phi_F_function_generated = False
+
     def generate_initial_embedded_integrator(
             self, X, U, Y,
             parameters_struct,
@@ -771,4 +777,53 @@ class Adaptive_MPC_StateSpaceInitializer:
 
     def generate_Adaptive_MPC_Phi_F_Updater(
             self, file_name: str = ADAPTIVE_MPC_PHI_F_UPDATER_FILE_NAME):
-        pass
+
+        file_name = self.file_name_suffix + file_name
+
+        code_text = ""
+        code_text += "from typing import Tuple\n"
+        code_text += "import numpy as np\n\n"
+
+        file_name_no_extension = os.path.splitext(
+            self.embedded_integrator_updater_file_name)[0]
+        code_text += "from " + file_name_no_extension + " import " + \
+            EMBEDDED_INTEGRATOR_UPDATER_CLASS_NAME + "\n"
+
+        file_name_no_extension = os.path.splitext(
+            self.prediction_matrices_phi_f_updater_file_name)[0]
+
+        code_text += "from " + file_name_no_extension + " import " + \
+            PREDICTION_MATRICES_PHI_F_UPDATER_CLASS_NAME + "\n\n"
+
+        # class for update Phi and F from parameters
+        code_text += "class " + ADAPTIVE_MPC_PHI_F_UPDATER_CLASS_NAME + ":\n\n"
+        code_text += "    @staticmethod\n"
+        code_text += "    def " + ADAPTIVE_MPC_PHI_F_UPDATER_FUNCTION_NAME + \
+            "(parameters_struct) -> Tuple[np.ndarray, np.ndarray]:\n\n"
+
+        code_text += "        A, B, C, _ = " + \
+            EMBEDDED_INTEGRATOR_UPDATER_CLASS_NAME + \
+            "." + EMBEDDED_INTEGRATOR_UPDATER_FUNCTION_NAME + \
+            "(parameters_struct)\n\n"
+
+        code_text += "        Phi, F = " + \
+            PREDICTION_MATRICES_PHI_F_UPDATER_CLASS_NAME + \
+            "." + PREDICTION_MATRICES_PHI_F_UPDATER_FUNCTION_NAME + \
+            "(A, B, C)\n\n"
+
+        code_text += "        return Phi, F\n\n"
+
+        with open(file_name, "w", encoding="utf-8") as f:
+            f.write(code_text)
+
+        module_name = os.path.splitext(os.path.basename(file_name))[0]
+        module = importlib.import_module(module_name)
+
+        Adaptive_MPC_Phi_F_Updater = getattr(
+            module, ADAPTIVE_MPC_PHI_F_UPDATER_CLASS_NAME)
+
+        self.Adaptive_MPC_Phi_F_updater_function = getattr(
+            Adaptive_MPC_Phi_F_Updater, ADAPTIVE_MPC_PHI_F_UPDATER_FUNCTION_NAME)
+
+        self.Adaptive_MPC_Phi_F_updater_file_name = file_name
+        self.Adaptive_MPC_Phi_F_function_generated = True
