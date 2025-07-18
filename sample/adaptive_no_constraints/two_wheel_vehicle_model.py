@@ -116,13 +116,15 @@ def main():
     Q_ekf = np.diag([1.0, 1.0, 1.0, 1.0, 1.0, 1.0])
     R_ekf = np.diag([1.0, 1.0, 1.0, 1.0, 1.0])
 
-    Weight_U = np.array([1.0, 1.0])
-    Weight_Y = np.array([1.0, 1.0, 1.0, 1.0, 1.0])
+    Weight_U = np.array([0.1, 0.1])
+    Weight_Y = np.array([1.0, 1.0, 0.01, 0.01, 1.0])
 
     X_initial = np.array([[0.0], [0.0], [0.0], [0.0], [0.0], [1.0]])
 
     Np = 16
     Nc = 1
+
+    Number_of_Delay = 0
 
     ada_mpc = AdaptiveMPC_NoConstraints(
         delta_time=sim_delta_time,
@@ -136,9 +138,36 @@ def main():
         Weight_U=Weight_U,
         Weight_Y=Weight_Y,
         Q_kf=Q_ekf,
-        R_kf=R_ekf)
+        R_kf=R_ekf,
+        Number_of_Delay=0)
 
-    a = 1
+    # X: px, py, theta, r, beta, V
+    x_true = np.array([[0.0], [0.0], [0.0], [0.0], [0.0], [1.0]])
+    # U: delta, accel
+    u = np.array([[0.0], [0.0]])
+
+    # create reference
+
+    plotter = SimulationPlotter()
+
+    y_measured = Y
+    y_store = [Y] * (Number_of_Delay + 1)
+    delay_index = 0
+
+    # simulation
+    for i in range(round(simulation_time / sim_delta_time)):
+        # system response
+        x_true = ada_mpc.state_space_initializer.fxu_function(
+            x_true, u, parameters_ekf)
+        y_measured = ada_mpc.state_space_initializer.hx_function(
+            x_true, parameters_ekf)
+
+        # system delay
+        delay_index += 1
+        if delay_index > Number_of_Delay:
+            delay_index = 0
+
+        y_measured = y_store[delay_index]
 
 
 if __name__ == "__main__":

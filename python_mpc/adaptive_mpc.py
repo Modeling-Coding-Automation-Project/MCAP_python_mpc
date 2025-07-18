@@ -156,7 +156,9 @@ class AdaptiveMPC_NoConstraints:
 
         self.is_ref_trajectory = is_ref_trajectory
 
-    def create_parameters_struct(self, parameters, X, U):
+    def create_parameters_struct(
+            self, parameters,
+            X: sp.Matrix, U: sp.Matrix):
         parameters_struct = parameters
 
         # merge parameters and X, U
