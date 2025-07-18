@@ -92,7 +92,8 @@ class AdaptiveMPC_NoConstraints:
                 hx=hx, hx_jacobian=hx_jacobian,
                 Q_kf=Q_kf,
                 R_kf=R_kf,
-                parameters_struct=parameters_struct
+                parameters_struct=parameters_struct,
+                file_name_without_ext=caller_file_name_without_ext
             )
 
         # state space initialization
@@ -143,19 +144,20 @@ class AdaptiveMPC_NoConstraints:
                                  hx: sp.Matrix, hx_jacobian: sp.Matrix,
                                  Q_kf: np.ndarray,
                                  R_kf: np.ndarray,
-                                 parameters_struct):
+                                 parameters_struct,
+                                 file_name_without_ext: str):
 
         fxu_file_name = ExpressionDeploy.write_state_function_code_from_sympy(
-            fxu, X, U)
+            fxu, X, U, file_name_without_ext)
         fxu_jacobian_X_file_name = \
             ExpressionDeploy.write_state_function_code_from_sympy(
-                fxu_jacobian_X, X, U)
+                fxu_jacobian_X, X, U, file_name_without_ext)
 
         hx_file_name = ExpressionDeploy.write_measurement_function_code_from_sympy(
-            hx, X)
+            hx, X, file_name_without_ext)
         hx_jacobian_file_name = \
             ExpressionDeploy.write_measurement_function_code_from_sympy(
-                hx_jacobian, X)
+                hx_jacobian, X, file_name_without_ext)
 
         local_vars = {}
 
