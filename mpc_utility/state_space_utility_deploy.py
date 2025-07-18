@@ -2,6 +2,7 @@ import os
 import sys
 sys.path.append(os.getcwd())
 
+from dataclasses import dataclass, fields, make_dataclass
 import sympy as sp
 import importlib
 
@@ -711,10 +712,30 @@ class Adaptive_MPC_StateSpaceInitializer:
         self.embedded_integrator_ABC_function_generated = False
 
     def generate_initial_embedded_integrator(
-            self, parameters_struct,
+            self, X, U, Y,
+            parameters_struct,
             state_space: StateSpaceEmbeddedIntegrator = None,
             file_name: str = EMBEDDED_INTEGRATOR_UPDATER_FILE_NAME):
 
+        # merge parameters and X, U, Y
+        free_symbols = set()
+        for mat in [X, U, Y]:
+            free_symbols.update(mat.free_symbols)
+        symbol_names = [str(s) for s in free_symbols]
+
+        param_names = [k for k in vars(
+            type(parameters_struct)) if not k.startswith('__')]
+
+        existing_fields = [(f.name, f.type, f)
+                           for f in fields(parameters_struct)]
+        new_fields = [(name, float, 0.0)
+                      for name in symbol_names if name not in param_names]
+
+        PXUY_Struct = make_dataclass(
+            "PXUY_Struct", existing_fields + new_fields)
+        all_parameters_struct = PXUY_Struct(**vars(parameters_struct))
+
+        # generate
         file_name = self.file_name_suffix + file_name
 
         if state_space is None:
@@ -724,7 +745,7 @@ class Adaptive_MPC_StateSpaceInitializer:
                 "State space must be an instance of StateSpaceEmbeddedIntegrator.")
 
         StateSpaceUpdaterDeploy.create_write_ABCD_update_code(
-            argument_struct=parameters_struct,
+            argument_struct=all_parameters_struct,
             A=state_space.A, B=state_space.B,
             C=state_space.C, D=None,
             class_name=EMBEDDED_INTEGRATOR_UPDATER_CLASS_NAME,

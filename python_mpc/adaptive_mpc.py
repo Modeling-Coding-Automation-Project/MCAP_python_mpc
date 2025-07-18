@@ -119,6 +119,7 @@ class AdaptiveMPC_NoConstraints:
         )
 
         self.state_space_initializer.generate_initial_embedded_integrator(
+            X=X, U=U, Y=Y,
             parameters_struct=self.parameters_struct,
             state_space=self.augmented_ss)
 
