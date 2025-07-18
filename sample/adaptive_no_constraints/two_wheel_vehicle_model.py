@@ -116,16 +116,22 @@ def main():
     Q_ekf = np.diag([1.0, 1.0, 1.0, 1.0, 1.0, 1.0])
     R_ekf = np.diag([1.0, 1.0, 1.0, 1.0, 1.0])
 
+    Weight_U = np.array([1.0, 1.0])
+    Weight_Y = np.array([1.0, 1.0, 1.0, 1.0, 1.0])
+
+    X_initial = np.array([[0.0], [0.0], [0.0], [0.0], [0.0], [1.0]])
+
     ada_mpc = AdaptiveMPC_NoConstraints(
         delta_time=sim_delta_time,
         X=X, U=U, Y=Y,
+        X_initial=X_initial,
         fxu=fxu, fxu_jacobian_X=fxu_jacobian_X,
         fxu_jacobian_U=fxu_jacobian_U,
         hx=hx, hx_jacobian=hx_jacobian,
         parameters_struct=parameters_ekf,
         Np=10, Nc=5,
-        Weight_U=np.array([1.0, 1.0]),
-        Weight_Y=np.array([1.0, 1.0, 1.0, 1.0, 1.0]),
+        Weight_U=Weight_U,
+        Weight_Y=Weight_Y,
         Q_kf=Q_ekf,
         R_kf=R_ekf)
 

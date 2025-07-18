@@ -2,6 +2,7 @@ import os
 import inspect
 import numpy as np
 import sympy as sp
+import control
 from dataclasses import is_dataclass
 
 from mpc_utility.state_space_utility import SymbolicStateSpace
@@ -22,6 +23,7 @@ class AdaptiveMPC_NoConstraints:
     def __init__(self,
                  delta_time: float,
                  X: sp.Matrix, U: sp.Matrix, Y: sp.Matrix,
+                 X_initial: np.ndarray,
                  fxu: sp.Matrix, fxu_jacobian_X: sp.Matrix,
                  fxu_jacobian_U: sp.Matrix,
                  hx: sp.Matrix, hx_jacobian: sp.Matrix,
@@ -71,6 +73,16 @@ class AdaptiveMPC_NoConstraints:
 
         self.parameters_struct = parameters_struct
 
+        # initialize state
+        self.X_inner_model = X_initial
+
+        self.AUGMENTED_INPUT_SIZE = U.shape[0]
+        self.AUGMENTED_STATE_SIZE = X.shape[0] + Y.shape[0]
+        self.AUGMENTED_OUTPUT_SIZE = X.shape[0] + Y.shape[0]
+
+        self.U_latest = np.zeros(
+            (self.AUGMENTED_INPUT_SIZE, 1))
+
         # create EKF object
         self.kalman_filter, self.fxu_file_name, self.fxu_jacobian_X_file_name, \
             self.hx_file_name, self.hx_jacobian_file_name \
@@ -95,6 +107,9 @@ class AdaptiveMPC_NoConstraints:
             hx_function=self.kalman_filter.measurement_function,
             hx_jacobian_function=self.kalman_filter.measurement_function_jacobian
         )
+
+        # Embedded Integrator
+        self.augmented_ss = self._generate_state_space_embedded_integrator()
 
     def initialize_kalman_filter(self,
                                  X: sp.Matrix, U: sp.Matrix, Y: sp.Matrix,
@@ -157,3 +172,25 @@ class AdaptiveMPC_NoConstraints:
         fxu_jacobian_U_script_function = local_vars["fxu_jacobian_U_script_function"]
 
         return fxu_jacobian_U_script_function, fxu_jacobian_U_file_name
+
+    def _generate_state_space_embedded_integrator(self):
+        A = self.state_space_initializer.fxu_jacobian_X_function(
+            self.X_inner_model, self.U_latest, self.parameters_struct)
+        A = sp.Matrix(A)
+
+        B = self.state_space_initializer.fxu_jacobian_U_function(
+            self.X_inner_model, self.U_latest, self.parameters_struct)
+        B = sp.Matrix(B)
+
+        C = self.state_space_initializer.hx_jacobian_function(
+            self.X_inner_model, self.parameters_struct)
+        C = sp.Matrix(C)
+
+        state_space = SymbolicStateSpace(
+            A, B, C,
+            delta_time=self.delta_time,
+            Number_of_Delay=self.Number_of_Delay)
+
+        augmented_ss = StateSpaceEmbeddedIntegrator(state_space)
+
+        return augmented_ss
