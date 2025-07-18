@@ -251,9 +251,9 @@ class AdaptiveMPC_NoConstraints:
             hx_jacobian: sp.Matrix
     ) -> StateSpaceEmbeddedIntegrator:
 
-        A = sp.Matrix(fxu_jacobian_X)
-        B = sp.Matrix(fxu_jacobian_U)
-        C = sp.Matrix(hx_jacobian)
+        A = fxu_jacobian_X
+        B = fxu_jacobian_U
+        C = hx_jacobian
 
         state_space = SymbolicStateSpace(
             A, B, C,
@@ -305,8 +305,80 @@ class AdaptiveMPC_NoConstraints:
 
         return prediction_matrices
 
+    def create_reference_trajectory(self, reference_trajectory: np.ndarray):
+        if self.is_ref_trajectory:
+            if not ((reference_trajectory.shape[1] == self.Np) or
+                    (reference_trajectory.shape[1] == 1)):
+                raise ValueError(
+                    "Reference vector must be either a single row vector or a Np row vectors.")
+
+        trajectory = MPC_ReferenceTrajectory(reference_trajectory, self.Np)
+
+        return trajectory
+
     def update_solver_factor(self, Phi: np.ndarray, Weight_U_Nc: np.ndarray):
         if (Phi.shape[1] != Weight_U_Nc.shape[0]) or (Phi.shape[1] != Weight_U_Nc.shape[1]):
             raise ValueError("Weight must have compatible dimensions.")
 
         self.solver_factor = np.linalg.solve(Phi.T @ Phi + Weight_U_Nc, Phi.T)
+
+    def solve(self, reference_trajectory: MPC_ReferenceTrajectory,
+              X_augmented: np.ndarray):
+        # (Phi^T * Phi + Weight)^-1 * Phi^T * (Trajectory - Fx)
+        delta_U = self.solver_factor @ reference_trajectory.calculate_dif(
+            self.prediction_matrices.F_ndarray @ X_augmented)
+
+        return delta_U
+
+    def calculate_this_U(self, U, delta_U):
+        U = U + \
+            delta_U[:self.AUGMENTED_INPUT_SIZE, :]
+
+        return U
+
+    def compensate_X_Y_delay(self, X: np.ndarray, Y: np.ndarray):
+        if self.Number_of_Delay > 0:
+            Y_measured = Y
+
+            X = self.kalman_filter.get_x_hat_without_delay()
+            Y = self.kalman_filter.C @ X
+
+            self.Y_store.push(Y)
+            Y_diff = Y_measured - self.Y_store.get()
+
+            return X, (Y + Y_diff)
+        else:
+            return X, Y
+
+    def update_parameters(self, parameters_struct):
+
+        self.kalman_filter.Parameters = parameters_struct
+
+        self.prediction_matrices.update_Phi_F_adaptive_runtime(
+            parameters_struct=parameters_struct,
+            parameters_X_U_struct=self.parameters_X_U_struct,
+            X_symbolic=self.X_symbolic, U_symbolic=self.U_symbolic,
+            X_ndarray=self.X_inner_model, U_ndarray=self.U_latest)
+
+        self.update_solver_factor(
+            self.prediction_matrices.Phi_ndarray, self.Weight_U_Nc)
+
+    def update_manipulation(self, reference: np.ndarray, Y: np.ndarray):
+
+        self.kalman_filter.predict_and_update(
+            self.U_latest, Y)
+        X = self.kalman_filter.x_hat
+        X_compensated, Y_compensated = self.compensate_X_Y_delay(X, Y)
+
+        delta_X = X_compensated - self.X_inner_model
+        X_augmented = np.vstack((delta_X, Y_compensated))
+
+        reference_trajectory = self.create_reference_trajectory(reference)
+
+        delta_U = self.solve(reference_trajectory, X_augmented)
+
+        self.U_latest = self.calculate_this_U(self.U_latest, delta_U)
+
+        self.X_inner_model = X_compensated
+
+        return self.U_latest
