@@ -127,28 +127,31 @@ class AdaptiveMPC_NoConstraints:
             )
 
         # state space initialization
-        (self.fxu_jacobian_X_script_function, self.fxu_jacobian_X_file_name), \
-            (self.fxu_jacobian_U_script_function, self.fxu_jacobian_U_file_name), \
-            (self.hx_jacobian_script_function, self.hx_jacobian_file_name) = \
+        (self.A_symbolic_script_function, self.A_symbolic_file_name), \
+            (self.B_symbolic_script_function, self.B_symbolic_file_name), \
+            (self.C_symbolic_script_function, self.C_symbolic_file_name), \
+            self.C_symbolic = \
             self.generate_function_file(
-            fxu_jacobian_X, fxu_jacobian_U, hx_jacobian,
-            X, U, Weight_Y,
-            caller_file_name_without_ext)
+            fxu_jacobian_X=self.A_symbolic,
+            fxu_jacobian_U=self.B_symbolic,
+            hx_jacobian=self.C_symbolic,
+            X=X, U=U, Weight_Y=Weight_Y,
+            file_name_without_ext=caller_file_name_without_ext)
 
         self.state_space_initializer = Adaptive_MPC_StateSpaceInitializer(
             fxu_function=self.fxu_script_function,
-            fxu_jacobian_X_function=self.fxu_jacobian_X_script_function,
-            fxu_jacobian_U_function=self.fxu_jacobian_U_script_function,
+            fxu_jacobian_X_function=self.A_symbolic_script_function,
+            fxu_jacobian_U_function=self.B_symbolic_script_function,
             hx_function=self.hx_script_function,
-            hx_jacobian_function=self.hx_jacobian_script_function,
+            hx_jacobian_function=self.C_symbolic_script_function,
             caller_file_name_without_ext=caller_file_name_without_ext
         )
 
         # Embedded Integrator
         self.augmented_ss = self._generate_state_space_embedded_integrator(
-            fxu_jacobian_X=fxu_jacobian_X,
-            fxu_jacobian_U=fxu_jacobian_U,
-            hx_jacobian=hx_jacobian
+            fxu_jacobian_X=self.A_symbolic,
+            fxu_jacobian_U=self.B_symbolic,
+            hx_jacobian=self.C_symbolic
         )
 
         self.state_space_initializer.generate_initial_embedded_integrator(
@@ -336,8 +339,10 @@ class AdaptiveMPC_NoConstraints:
         fxu_jacobian_U_script_function = local_vars["fxu_jacobian_U_script_function"]
         hx_jacobian_script_function = local_vars["hx_jacobian_script_function"]
 
-        return (fxu_jacobian_X_script_function, fxu_jacobian_X_file_name), (fxu_jacobian_U_script_function, fxu_jacobian_U_file_name), \
-            (hx_jacobian_script_function, hx_jacobian_file_name)
+        return (fxu_jacobian_X_script_function, fxu_jacobian_X_file_name), \
+            (fxu_jacobian_U_script_function, fxu_jacobian_U_file_name), \
+            (hx_jacobian_script_function, hx_jacobian_file_name), \
+            hx_jacobian
 
     def _generate_state_space_embedded_integrator(
             self,
