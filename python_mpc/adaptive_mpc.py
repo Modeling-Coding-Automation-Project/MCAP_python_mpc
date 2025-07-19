@@ -113,8 +113,9 @@ class AdaptiveMPC_NoConstraints:
             (self.AUGMENTED_INPUT_SIZE, 1))
 
         # create EKF object
-        self.kalman_filter, self.fxu_file_name, self.fxu_jacobian_X_file_name, \
-            self.hx_file_name, self.hx_jacobian_file_name \
+        self.kalman_filter, \
+            (self.fxu_script_function, self.fxu_file_name), \
+            (self.hx_script_function, self.hx_file_name) \
             = self.initialize_kalman_filter(
                 X=X, U=U, Y=Y,
                 fxu=fxu, fxu_jacobian_X=fxu_jacobian_X,
@@ -126,17 +127,19 @@ class AdaptiveMPC_NoConstraints:
             )
 
         # state space initialization
-        self.fxu_jacobian_U_script_function, \
-            self.fxu_jacobian_U_file_name = \
-            self.generate_fxu_jacobian_U_function(
-                fxu_jacobian_U, X, U, caller_file_name_without_ext)
+        (self.fxu_jacobian_X_script_function, self.fxu_jacobian_X_file_name), \
+            (self.fxu_jacobian_U_script_function, self.fxu_jacobian_U_file_name), \
+            (self.hx_jacobian_script_function, self.hx_jacobian_file_name) = \
+            self.generate_function_file(
+            fxu_jacobian_X, fxu_jacobian_U, hx_jacobian,
+            X, U, caller_file_name_without_ext)
 
         self.state_space_initializer = Adaptive_MPC_StateSpaceInitializer(
-            fxu_function=self.kalman_filter.state_function,
-            fxu_jacobian_X_function=self.kalman_filter.state_function_jacobian,
+            fxu_function=self.fxu_script_function,
+            fxu_jacobian_X_function=self.fxu_jacobian_X_script_function,
             fxu_jacobian_U_function=self.fxu_jacobian_U_script_function,
-            hx_function=self.kalman_filter.measurement_function,
-            hx_jacobian_function=self.kalman_filter.measurement_function_jacobian,
+            hx_function=self.hx_script_function,
+            hx_jacobian_function=self.hx_jacobian_script_function,
             caller_file_name_without_ext=caller_file_name_without_ext
         )
 
@@ -293,45 +296,44 @@ class AdaptiveMPC_NoConstraints:
         )
         kalman_filter.x_hat = self.X_inner_model
 
-        return kalman_filter, fxu_file_name, fxu_jacobian_X_file_name, \
-            hx_file_name, hx_jacobian_file_name
+        return kalman_filter, \
+            (fxu_script_function, fxu_file_name), \
+            (hx_script_function, hx_file_name)
 
-    def generate_fxu_jacobian_U_function(
-            self, fxu_jacobian_U: sp.Matrix,
+    def generate_function_file(
+            self,
+            fxu_jacobian_X: sp.Matrix,
+            fxu_jacobian_U: sp.Matrix,
+            hx_jacobian: sp.Matrix,
             X: sp.Matrix, U: sp.Matrix,
             file_name_without_ext: str):
+
+        file_name_without_ext_to_write = f"{file_name_without_ext}_adaptive_mpc"
+
+        fxu_jacobian_X_file_name = ExpressionDeploy.write_state_function_code_from_sympy(
+            fxu_jacobian_X, X, U, file_name_without_ext_to_write)
+
         fxu_jacobian_U_file_name = ExpressionDeploy.write_state_function_code_from_sympy(
-            fxu_jacobian_U, X, U, file_name_without_ext)
-        """
-        Generates a Python function from a symbolic Jacobian matrix with respect to the input variables (U),
-        writes the function code to a file, and dynamically imports the generated function.
+            fxu_jacobian_U, X, U, file_name_without_ext_to_write)
 
-        Args:
-            fxu_jacobian_U (sp.Matrix): The symbolic Jacobian matrix of the system with respect to input variables U.
-            X (sp.Matrix): The symbolic state variables.
-            U (sp.Matrix): The symbolic input variables.
-            file_name_without_ext (str): The base file name (without extension) for the generated Python code.
-
-        Returns:
-            tuple: A tuple containing:
-                - fxu_jacobian_U_script_function (callable): The imported Python function generated from the symbolic Jacobian.
-                - fxu_jacobian_U_file_name (str): The file name of the generated Python code.
-
-        Raises:
-            ImportError: If the generated function cannot be imported.
-            Exception: For other errors during code generation or execution.
-
-        Note:
-            This method uses dynamic code generation and import, which may have security implications.
-        """
+        hx_jacobian_file_name = ExpressionDeploy.write_measurement_function_code_from_sympy(
+            hx_jacobian, X, file_name_without_ext_to_write)
 
         local_vars = {}
 
+        exec(f"from {fxu_jacobian_X_file_name} import function as fxu_jacobian_X_script_function",
+             globals(), local_vars)
         exec(f"from {fxu_jacobian_U_file_name} import function as fxu_jacobian_U_script_function",
              globals(), local_vars)
-        fxu_jacobian_U_script_function = local_vars["fxu_jacobian_U_script_function"]
+        exec(f"from {hx_jacobian_file_name} import function as hx_jacobian_script_function",
+             globals(), local_vars)
 
-        return fxu_jacobian_U_script_function, fxu_jacobian_U_file_name
+        fxu_jacobian_X_script_function = local_vars["fxu_jacobian_X_script_function"]
+        fxu_jacobian_U_script_function = local_vars["fxu_jacobian_U_script_function"]
+        hx_jacobian_script_function = local_vars["hx_jacobian_script_function"]
+
+        return (fxu_jacobian_X_script_function, fxu_jacobian_X_file_name), (fxu_jacobian_U_script_function, fxu_jacobian_U_file_name), \
+            (hx_jacobian_script_function, hx_jacobian_file_name)
 
     def _generate_state_space_embedded_integrator(
             self,
