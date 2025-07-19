@@ -132,7 +132,8 @@ class AdaptiveMPC_NoConstraints:
             (self.hx_jacobian_script_function, self.hx_jacobian_file_name) = \
             self.generate_function_file(
             fxu_jacobian_X, fxu_jacobian_U, hx_jacobian,
-            X, U, caller_file_name_without_ext)
+            X, U, Weight_Y,
+            caller_file_name_without_ext)
 
         self.state_space_initializer = Adaptive_MPC_StateSpaceInitializer(
             fxu_function=self.fxu_script_function,
@@ -306,6 +307,7 @@ class AdaptiveMPC_NoConstraints:
             fxu_jacobian_U: sp.Matrix,
             hx_jacobian: sp.Matrix,
             X: sp.Matrix, U: sp.Matrix,
+            Weight_Y: np.ndarray,
             file_name_without_ext: str):
 
         file_name_without_ext_to_write = f"{file_name_without_ext}_adaptive_mpc"
@@ -316,8 +318,10 @@ class AdaptiveMPC_NoConstraints:
         fxu_jacobian_U_file_name = ExpressionDeploy.write_state_function_code_from_sympy(
             fxu_jacobian_U, X, U, file_name_without_ext_to_write)
 
+        hx_jacobian_with_Weight = sp.Matrix(np.diag(Weight_Y)) * hx_jacobian
+
         hx_jacobian_file_name = ExpressionDeploy.write_measurement_function_code_from_sympy(
-            hx_jacobian, X, file_name_without_ext_to_write)
+            hx_jacobian_with_Weight, X, file_name_without_ext_to_write)
 
         local_vars = {}
 
