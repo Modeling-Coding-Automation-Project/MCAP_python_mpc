@@ -168,6 +168,8 @@ def main():
 
     time = np.arange(0, simulation_time, sim_delta_time)
 
+    STEERING_MAX = 30.0 / 180.0 * math.pi
+
     X, U, Y, \
         fxu, fxu_jacobian_X, fxu_jacobian_U, \
         hx, hx_jacobian = create_model(sim_delta_time)
@@ -178,7 +180,7 @@ def main():
     R_ekf = np.diag([1.0, 1.0, 1.0, 1.0, 1.0])
 
     Weight_U = np.array([0.1, 0.1])
-    Weight_Y = np.array([1.0, 1.0, 0.01, 0.01, 1.0])
+    Weight_Y = np.array([1.0, 1.0, 0.05, 0.05, 1.0])
 
     X_initial = np.array([[0.0], [0.0], [0.0], [0.0], [0.0], [10.0]])
 
@@ -220,6 +222,11 @@ def main():
     # simulation
     for i in range(round(simulation_time / sim_delta_time)):
         # system response
+        if u[0] > STEERING_MAX:
+            u[0] = STEERING_MAX
+        elif u[0] < -STEERING_MAX:
+            u[0] = -STEERING_MAX
+
         x_true = ada_mpc.state_space_initializer.fxu_function(
             x_true, u, parameters_ekf)
         y_store[delay_index] = ada_mpc.state_space_initializer.hx_function(
