@@ -339,7 +339,33 @@ class MPC_PredictionMatrices:
             self.Phi_ndarray = Phi
             self.F_ndarray = F
 
+    def update_Phi_F_adaptive_runtime(
+            self, parameters_struct,
+            X_ndarray: np.ndarray, U_ndarray: np.ndarray):
+
+        if self.Phi_F_updater_function is not None:
+            Phi, F = self.Phi_F_updater_function(
+                X=X_ndarray, U=U_ndarray,
+                parameters_struct=parameters_struct)
+
+            self.Phi_ndarray = Phi
+            self.F_ndarray = F
+
     def _generate_exponential_A_list(self, A: sp.Matrix):
+        """
+        Generates a list of matrix powers of A up to Np.
+
+        Args:
+            A (sp.Matrix): The square matrix to be exponentiated.
+
+        Returns:
+            list: A list where the i-th element is A raised to the (i+1)-th power,
+              i.e., [A, A^2, ..., A^Np].
+
+        Notes:
+            - Assumes self.Np is defined and is a positive integer.
+            - Uses matrix multiplication to compute powers of A.
+        """
 
         exponential_A_list = []
 
@@ -352,6 +378,24 @@ class MPC_PredictionMatrices:
         return exponential_A_list
 
     def _build_F_expression(self, C: sp.Matrix) -> sp.Matrix:
+        """
+        Constructs the F expression matrix used in state-space model predictive control.
+
+        Args:
+            C (sp.Matrix): The output matrix of the state-space system.
+
+        Returns:
+            sp.Matrix: The F expression matrix of shape (OUTPUT_SIZE * Np, STATE_SIZE),
+            where each block row corresponds to C multiplied by the state transition matrix
+            raised to increasing powers.
+
+        Notes:
+            - self.OUTPUT_SIZE: Number of outputs in the system.
+            - self.Np: Prediction horizon.
+            - self.STATE_SIZE: Number of states in the system.
+            - self._exponential_A_list: List of powers of the state transition matrix A,
+              precomputed for each prediction step.
+        """
 
         F_expression = sp.zeros(self.OUTPUT_SIZE * self.Np, self.STATE_SIZE)
 
@@ -365,6 +409,26 @@ class MPC_PredictionMatrices:
         return F_expression
 
     def _build_Phi_expression(self, B: sp.Matrix, C: sp.Matrix) -> sp.Matrix:
+        """
+        Constructs the Phi expression matrix used in Model Predictive Control (MPC)
+          for state-space models.
+
+        The Phi matrix maps the sequence of future control inputs
+          to the predicted outputs over the prediction horizon.
+        It is built using the system input matrix `B`, output matrix `C`,
+          and the precomputed list of powers of the
+        system matrix `A` (stored in `self._exponential_A_list`).
+
+        Args:
+            B (sp.Matrix): The input matrix of the state-space model.
+            C (sp.Matrix): The output matrix of the state-space model.
+
+        Returns:
+            sp.Matrix: The constructed Phi expression matrix of size
+                       (OUTPUT_SIZE * Np, INPUT_SIZE * Nc),
+                       where Np is the prediction horizon
+                       and Nc is the control horizon.
+        """
 
         Phi_expression = sp.zeros(self.OUTPUT_SIZE * self.Np,
                                   self.INPUT_SIZE * self.Nc)
