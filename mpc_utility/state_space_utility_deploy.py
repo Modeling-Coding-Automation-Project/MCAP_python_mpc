@@ -436,6 +436,133 @@ class StateSpaceUpdaterDeploy:
         with open(file_name, "w", encoding="utf-8") as f:
             f.write(code_text)
 
+    @staticmethod
+    def create_Adaptive_ABCD_update_code(
+            parameters_struct,
+            X: sp.Matrix, U: sp.Matrix,
+            A: sp.Matrix = None,
+            B: sp.Matrix = None,
+            C: sp.Matrix = None,
+            D: sp.Matrix = None,
+            class_name: str = ""):
+
+        if class_name == "":
+            raise ValueError(
+                "class_name must be provided to create the state space updater code.")
+
+        parameter_names = [k for k in vars(
+            type(parameters_struct)) if not k.startswith('__')]
+
+        free_symbols = set()
+        for mat in [X, U]:
+            free_symbols.update(mat.free_symbols)
+        symbol_names = [str(s) for s in free_symbols]
+
+        all_names = parameter_names + symbol_names
+
+        code_text = ""
+        code_text += "from typing import Tuple\n"
+        code_text += "from math import *\n"
+        code_text += "import numpy as np\n\n\n"
+
+        # A class
+        if A is not None:
+            code_text += StateSpaceUpdaterDeploy.write_matrix_class_code(
+                updater_class_name=A_UPDATER_CLASS_NAME,
+                function_name=A_UPDATER_FUNCTION_NAME,
+                sym_object=A,
+                param_names=all_names)
+
+        # B class
+        if B is not None:
+            code_text += StateSpaceUpdaterDeploy.write_matrix_class_code(
+                updater_class_name=B_UPDATER_CLASS_NAME,
+                function_name=B_UPDATER_FUNCTION_NAME,
+                sym_object=B,
+                param_names=all_names)
+
+        # C class
+        if C is not None:
+            code_text += StateSpaceUpdaterDeploy.write_matrix_class_code(
+                updater_class_name=C_UPDATER_CLASS_NAME,
+                function_name=C_UPDATER_FUNCTION_NAME,
+                sym_object=C,
+                param_names=all_names)
+
+        # D class
+        if D is not None:
+            code_text += StateSpaceUpdaterDeploy.write_matrix_class_code(
+                updater_class_name=D_UPDATER_CLASS_NAME,
+                function_name=D_UPDATER_FUNCTION_NAME,
+                sym_object=D,
+                param_names=all_names)
+
+        # ABCD class
+        code_text += "class " + class_name + ":\n\n"
+        code_text += "    @staticmethod\n"
+        code_text += f"    def {MPC_STATE_SPACE_UPDATER_FUNCTION_NAME}(X, U, parameters):\n\n"
+
+        for i in range(X.shape[0]):
+            symbol_name = str(X[i, 0].free_symbols)
+            symbol_name = symbol_name.strip("{}")
+            code_text += f"        {symbol_name} = X[{i}, 0]\n"
+
+        for i in range(U.shape[0]):
+            symbol_name = str(U[i, 0].free_symbols)
+            symbol_name = symbol_name.strip("{}")
+            code_text += f"        {symbol_name} = U[{i}, 0]\n"
+
+        for name in parameter_names:
+            code_text += f"        {name} = parameters.{name}\n"
+
+        code_text += "\n"
+        if A is not None:
+            code_text += f"        A = {A_UPDATER_CLASS_NAME}.{MPC_STATE_SPACE_UPDATER_FUNCTION_NAME}" + \
+                f"({StateSpaceUpdaterDeploy.write_param_names_argument(all_names)})\n\n"
+        else:
+            code_text += "        A = None\n\n"
+
+        if B is not None:
+            code_text += f"        B = {B_UPDATER_CLASS_NAME}.{MPC_STATE_SPACE_UPDATER_FUNCTION_NAME}" + \
+                f"({StateSpaceUpdaterDeploy.write_param_names_argument(all_names)})\n\n"
+        else:
+            code_text += "        B = None\n\n"
+
+        if C is not None:
+            code_text += f"        C = {C_UPDATER_CLASS_NAME}.{MPC_STATE_SPACE_UPDATER_FUNCTION_NAME}" + \
+                f"({StateSpaceUpdaterDeploy.write_param_names_argument(all_names)})\n\n"
+        else:
+            code_text += "        C = None\n\n"
+
+        if D is not None:
+            code_text += f"        D = {D_UPDATER_CLASS_NAME}.{MPC_STATE_SPACE_UPDATER_FUNCTION_NAME}" + \
+                f"({StateSpaceUpdaterDeploy.write_param_names_argument(all_names)})\n\n"
+        else:
+            code_text += "        D = None\n\n"
+
+        code_text += "        return A, B, C, D\n\n"
+
+        return code_text
+
+    @staticmethod
+    def create_write_Adaptive_ABCD_update_code(
+            parameters_struct,
+            X: sp.Matrix, U: sp.Matrix,
+            A: sp.Matrix = None,
+            B: sp.Matrix = None,
+            C: sp.Matrix = None,
+            D: sp.Matrix = None,
+            class_name: str = MPC_STATE_SPACE_UPDATER_CLASS_NAME,
+            file_name: str = MPC_STATE_SPACE_UPDATER_FILE_NAME):
+
+        code_text = StateSpaceUpdaterDeploy.create_Adaptive_ABCD_update_code(
+            parameters_struct=parameters_struct,
+            X=X, U=U,
+            A=A, B=B, C=C, D=D, class_name=class_name)
+
+        with open(file_name, "w", encoding="utf-8") as f:
+            f.write(code_text)
+
 
 class LTV_MPC_StateSpaceInitializer:
     """
@@ -769,33 +896,11 @@ class Adaptive_MPC_StateSpaceInitializer:
 
     def generate_initial_embedded_integrator(
             self,
-            parameters_X_U_struct,
+            parameters_struct,
+            X: sp.Matrix = None,
+            U: sp.Matrix = None,
             state_space: StateSpaceEmbeddedIntegrator = None,
             file_name: str = EMBEDDED_INTEGRATOR_UPDATER_FILE_NAME):
-        """
-        Generates and writes the initial embedded integrator update code to a file.
-
-        This method creates the update code for the embedded integrator's state-space representation
-        using the provided parameters and state space object. The generated code is written to a file
-        whose name is constructed from the given file name and an internal suffix.
-
-        Args:
-            parameters_X_U_struct: Structure containing parameters for the state-space update.
-            state_space (StateSpaceEmbeddedIntegrator): The state-space object representing
-              the embedded integrator.
-            file_name (str, optional): The base name of the file to write the update code to.
-              Defaults to EMBEDDED_INTEGRATOR_UPDATER_FILE_NAME.
-
-        Raises:
-            ValueError: If the state_space argument is not provided.
-            TypeError: If the state_space is not an instance of StateSpaceEmbeddedIntegrator.
-
-        Side Effects:
-            Writes the generated update code to a file.
-            Updates internal attributes:
-                - embedded_integrator_updater_file_name
-                - embedded_integrator_ABC_function_generated
-        """
 
         file_name = self.file_name_suffix + file_name
 
@@ -805,8 +910,9 @@ class Adaptive_MPC_StateSpaceInitializer:
             raise TypeError(
                 "State space must be an instance of StateSpaceEmbeddedIntegrator.")
 
-        StateSpaceUpdaterDeploy.create_write_ABCD_update_code(
-            argument_struct=parameters_X_U_struct,
+        StateSpaceUpdaterDeploy.create_write_Adaptive_ABCD_update_code(
+            parameters_struct=parameters_struct,
+            X=X, U=U,
             A=state_space.A, B=state_space.B,
             C=state_space.C, D=None,
             class_name=EMBEDDED_INTEGRATOR_UPDATER_CLASS_NAME,
@@ -894,12 +1000,12 @@ class Adaptive_MPC_StateSpaceInitializer:
         code_text += "class " + ADAPTIVE_MPC_PHI_F_UPDATER_CLASS_NAME + ":\n\n"
         code_text += "    @staticmethod\n"
         code_text += "    def " + ADAPTIVE_MPC_PHI_F_UPDATER_FUNCTION_NAME + \
-            "(parameters_struct) -> Tuple[np.ndarray, np.ndarray]:\n\n"
+            "(X, U, parameters_struct) -> Tuple[np.ndarray, np.ndarray]:\n\n"
 
         code_text += "        A, B, C, _ = " + \
             EMBEDDED_INTEGRATOR_UPDATER_CLASS_NAME + \
             "." + EMBEDDED_INTEGRATOR_UPDATER_FUNCTION_NAME + \
-            "(parameters_struct)\n\n"
+            "(X, U, parameters_struct)\n\n"
 
         code_text += "        Phi, F = " + \
             PREDICTION_MATRICES_PHI_F_UPDATER_CLASS_NAME + \

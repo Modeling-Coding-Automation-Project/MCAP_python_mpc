@@ -340,48 +340,13 @@ class MPC_PredictionMatrices:
             self.F_ndarray = F
 
     def update_Phi_F_adaptive_runtime(
-            self, parameters_struct, parameters_X_U_struct,
-            X_symbolic: sp.Matrix, U_symbolic: sp.Matrix,
+            self, parameters_struct,
             X_ndarray: np.ndarray, U_ndarray: np.ndarray):
-        """
-        Updates the Phi and F matrices at runtime using adaptive parameters.
-
-        This method copies all fields from `parameters_struct` to `parameters_X_U_struct`,
-        then updates `parameters_X_U_struct` with the current values of state and input variables
-        from `X_ndarray` and `U_ndarray` using their symbolic names
-          from `X_symbolic` and `U_symbolic`.
-        If a Phi/F updater function is defined, it is called with the updated parameters to
-        compute and store the new Phi and F matrices.
-
-        Args:
-            parameters_struct: An object containing parameter fields to be copied.
-            parameters_X_U_struct: An object to be updated with parameters
-              and current state/input values.
-            X_symbolic (sp.Matrix): Symbolic representation of state variables.
-            U_symbolic (sp.Matrix): Symbolic representation of input variables.
-            X_ndarray (np.ndarray): Numeric values of state variables.
-            U_ndarray (np.ndarray): Numeric values of input variables.
-
-        Returns:
-            None. Updates `self.Phi_ndarray` and `self.F_ndarray` in place.
-        """
-
-        for field in vars(type(parameters_struct)):
-            if not field.startswith('__'):
-                value = getattr(parameters_struct, field)
-                setattr(parameters_X_U_struct, field, value)
-
-        for i in range(X_symbolic.shape[0]):
-            symbol_name = str(X_symbolic[i, 0])
-            setattr(parameters_X_U_struct, symbol_name, float(X_ndarray[i, 0]))
-
-        for i in range(U_symbolic.shape[0]):
-            symbol_name = str(U_symbolic[i, 0])
-            setattr(parameters_X_U_struct, symbol_name, float(U_ndarray[i, 0]))
 
         if self.Phi_F_updater_function is not None:
             Phi, F = self.Phi_F_updater_function(
-                parameters_struct=parameters_X_U_struct)
+                X=X_ndarray, U=U_ndarray,
+                parameters_struct=parameters_struct)
 
             self.Phi_ndarray = Phi
             self.F_ndarray = F

@@ -92,9 +92,6 @@ class AdaptiveMPC_NoConstraints:
             raise ValueError(
                 "parameters_struct must be a dataclass instance.")
 
-        self.parameters_X_U_struct = self.create_parameters_X_U_struct(
-            parameters_struct, X, U)
-
         # remember X, U, A, B, C symbolic matrices
         self.X_symbolic = X
         self.U_symbolic = U
@@ -155,7 +152,7 @@ class AdaptiveMPC_NoConstraints:
         )
 
         self.state_space_initializer.generate_initial_embedded_integrator(
-            parameters_X_U_struct=self.parameters_X_U_struct,
+            parameters_struct=parameters_struct, X=X, U=U,
             state_space=self.augmented_ss)
 
         if Nc > Np:
@@ -182,47 +179,6 @@ class AdaptiveMPC_NoConstraints:
                                            self.Number_of_Delay)
 
         self.is_ref_trajectory = is_ref_trajectory
-
-    def create_parameters_X_U_struct(
-            self, parameters_struct,
-            X: sp.Matrix, U: sp.Matrix):
-        """
-        Creates a new dataclass instance that merges the fields of the given parameters_struct
-        with the free symbolic variables found in the provided X and U matrices.
-
-        The resulting dataclass includes all existing fields from parameters_struct and adds
-        new fields for any symbolic variables present in X and U that are not already in parameters_struct.
-        These new fields are initialized with a default value of 0.0 and type float.
-
-        Args:
-            parameters_struct: An instance of a dataclass containing parameter fields.
-            X (sp.Matrix): A SymPy matrix containing symbolic variables.
-            U (sp.Matrix): A SymPy matrix containing symbolic variables.
-
-        Returns:
-            An instance of a dynamically created dataclass that contains all fields from
-            parameters_struct and additional fields for the symbolic variables in X and U.
-        """
-
-        # merge parameters and X, U
-        free_symbols = set()
-        for mat in [X, U]:
-            free_symbols.update(mat.free_symbols)
-        symbol_names = [str(s) for s in free_symbols]
-
-        param_names = [k for k in vars(
-            type(parameters_struct)) if not k.startswith('__')]
-
-        existing_fields = [(f.name, f.type, f)
-                           for f in fields(parameters_struct)]
-        new_fields = [(name, float, 0.0)
-                      for name in symbol_names if name not in param_names]
-
-        PXU_Struct = make_dataclass(
-            "PXU_Struct", existing_fields + new_fields)
-        parameters_X_U_struct = PXU_Struct(**vars(parameters_struct))
-
-        return parameters_X_U_struct
 
     def initialize_kalman_filter(self,
                                  X: sp.Matrix, U: sp.Matrix, Y: sp.Matrix,
@@ -447,9 +403,6 @@ class AdaptiveMPC_NoConstraints:
 
         prediction_matrices.update_Phi_F_adaptive_runtime(
             parameters_struct=self.kalman_filter.Parameters,
-            parameters_X_U_struct=self.parameters_X_U_struct,
-            X_symbolic=self.X_symbolic,
-            U_symbolic=self.U_symbolic,
             X_ndarray=self.X_inner_model,
             U_ndarray=self.U_latest)
 
@@ -635,9 +588,6 @@ class AdaptiveMPC_NoConstraints:
 
         self.prediction_matrices.update_Phi_F_adaptive_runtime(
             parameters_struct=self.kalman_filter.Parameters,
-            parameters_X_U_struct=self.parameters_X_U_struct,
-            X_symbolic=self.X_symbolic,
-            U_symbolic=self.U_symbolic,
             X_ndarray=X_compensated,
             U_ndarray=self.U_latest)
 
