@@ -22,7 +22,6 @@ from dataclasses import dataclass
 from python_mpc.adaptive_mpc import AdaptiveMPC_NoConstraints
 
 from sample.simulation_manager.visualize.simulation_plotter import SimulationPlotter
-from sample.simulation_manager.signal_edit.sampler import PulseGenerator
 
 
 def create_model(delta_time: float):
@@ -200,7 +199,7 @@ def main():
         Weight_Y=Weight_Y,
         Q_kf=Q_ekf,
         R_kf=R_ekf,
-        Number_of_Delay=0)
+        Number_of_Delay=Number_of_Delay)
 
     # X: px, py, theta, r, beta, V
     x_true = X_initial
