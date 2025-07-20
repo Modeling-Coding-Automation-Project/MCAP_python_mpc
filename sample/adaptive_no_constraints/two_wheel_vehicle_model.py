@@ -168,8 +168,6 @@ def main():
 
     time = np.arange(0, simulation_time, sim_delta_time)
 
-    STEERING_MAX = 30.0 / 180.0 * math.pi
-
     X, U, Y, \
         fxu, fxu_jacobian_X, fxu_jacobian_U, \
         hx, hx_jacobian = create_model(sim_delta_time)
@@ -180,7 +178,7 @@ def main():
     R_ekf = np.diag([1.0, 1.0, 1.0, 1.0, 1.0])
 
     Weight_U = np.array([0.1, 0.1])
-    Weight_Y = np.array([1.0, 1.0, 0.05, 0.05, 1.0])
+    Weight_Y = np.array([1.0, 1.0, 0.05, 0.01, 1.0])
 
     X_initial = np.array([[0.0], [0.0], [0.0], [0.0], [0.0], [10.0]])
 
@@ -222,10 +220,8 @@ def main():
     # simulation
     for i in range(round(simulation_time / sim_delta_time)):
         # system response
-        if u[0] > STEERING_MAX:
-            u[0] = STEERING_MAX
-        elif u[0] < -STEERING_MAX:
-            u[0] = -STEERING_MAX
+        if i > 0:
+            u = np.copy(u_from_mpc)
 
         x_true = ada_mpc.state_space_initializer.fxu_function(
             x_true, u, parameters_ekf)
@@ -248,12 +244,12 @@ def main():
             [V_sequence[i, 0]]
         ])
 
-        u = ada_mpc.update_manipulation(ref, y_measured)
+        u_from_mpc = ada_mpc.update_manipulation(ref, y_measured)
 
         plotter.append_name(x_true, "x_true")
         plotter.append_name(ref, "ref")
         plotter.append_name(y_measured, "y_measured")
-        plotter.append_name(u, "u")
+        plotter.append_name(u_from_mpc, "u")
 
     # plot
     plotter.assign("x_true", column=0, row=0, position=(0, 0),
