@@ -445,6 +445,31 @@ class StateSpaceUpdaterDeploy:
             C: sp.Matrix = None,
             D: sp.Matrix = None,
             class_name: str = ""):
+        """
+        Generates Python code for an adaptive state-space updater class, including methods to update the A, B, C, and D matrices
+        based on symbolic representations and provided parameters.
+
+        Args:
+            parameters_struct: An object containing parameter attributes used in the state-space matrices.
+            X (sp.Matrix): Symbolic state vector (SymPy Matrix).
+            U (sp.Matrix): Symbolic input vector (SymPy Matrix).
+            A (sp.Matrix, optional): Symbolic state matrix. Defaults to None.
+            B (sp.Matrix, optional): Symbolic input matrix. Defaults to None.
+            C (sp.Matrix, optional): Symbolic output matrix. Defaults to None.
+            D (sp.Matrix, optional): Symbolic feedthrough matrix. Defaults to None.
+            class_name (str): Name of the generated updater class.
+
+        Returns:
+            str: Python source code for the adaptive state-space updater class and its matrix updater classes.
+
+        Raises:
+            ValueError: If `class_name` is not provided.
+
+        Notes:
+            - The generated code includes classes for updating each matrix (A, B, C, D) if provided.
+            - The main updater class contains a static method to compute updated matrices given state, input, and parameters.
+            - Symbolic variables from X and U, as well as parameter names, are mapped to local variables in the generated code.
+        """
 
         if class_name == "":
             raise ValueError(
@@ -554,6 +579,31 @@ class StateSpaceUpdaterDeploy:
             D: sp.Matrix = None,
             class_name: str = MPC_STATE_SPACE_UPDATER_CLASS_NAME,
             file_name: str = MPC_STATE_SPACE_UPDATER_FILE_NAME):
+        """
+        Generates and writes Python code for updating adaptive state-space matrices
+          (A, B, C, D) to a specified file.
+
+        This function uses the provided parameters and symbolic matrices
+          to generate code for updating the state-space
+        representation in an adaptive manner. The generated code is written
+          to the file specified by `file_name`.
+
+        Args:
+            parameters_struct: Structure containing parameters required for code generation.
+            X (sp.Matrix): Symbolic state vector matrix.
+            U (sp.Matrix): Symbolic input vector matrix.
+            A (sp.Matrix, optional): Symbolic state matrix. Defaults to None.
+            B (sp.Matrix, optional): Symbolic input matrix. Defaults to None.
+            C (sp.Matrix, optional): Symbolic output matrix. Defaults to None.
+            D (sp.Matrix, optional): Symbolic feedthrough matrix. Defaults to None.
+            class_name (str, optional): Name of the class to be generated. Defaults
+              to MPC_STATE_SPACE_UPDATER_CLASS_NAME.
+            file_name (str, optional): Path to the file where the generated code
+              will be written. Defaults to MPC_STATE_SPACE_UPDATER_FILE_NAME.
+
+        Returns:
+            None
+        """
 
         code_text = StateSpaceUpdaterDeploy.create_Adaptive_ABCD_update_code(
             parameters_struct=parameters_struct,
@@ -901,6 +951,34 @@ class Adaptive_MPC_StateSpaceInitializer:
             U: sp.Matrix = None,
             state_space: StateSpaceEmbeddedIntegrator = None,
             file_name: str = EMBEDDED_INTEGRATOR_UPDATER_FILE_NAME):
+        """
+        Generates and writes the initial embedded integrator updater code
+          for a given state space model.
+
+        This method creates the code required to update the ABCD matrices
+          for an embedded integrator
+        using the provided parameters and state space model.
+          The generated code is written to a file
+        whose name is constructed from the provided file name and an internal suffix.
+
+        Args:
+            parameters_struct: The structure containing parameters required for code generation.
+            X (sp.Matrix, optional): The state matrix. Defaults to None.
+            U (sp.Matrix, optional): The input matrix. Defaults to None.
+            state_space (StateSpaceEmbeddedIntegrator, optional): The state space model for the embedded integrator.
+                Must be an instance of StateSpaceEmbeddedIntegrator. If None, raises ValueError.
+            file_name (str, optional): The base name of the file to write the updater code to.
+                Defaults to EMBEDDED_INTEGRATOR_UPDATER_FILE_NAME.
+
+        Raises:
+            ValueError: If state_space is not provided.
+            TypeError: If state_space is not an instance of StateSpaceEmbeddedIntegrator.
+
+        Side Effects:
+            Writes the generated updater code to the specified file.
+            Updates internal attributes to reflect the generated file name
+              and function status.
+        """
 
         file_name = self.file_name_suffix + file_name
 

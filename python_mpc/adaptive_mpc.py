@@ -268,6 +268,36 @@ class AdaptiveMPC_NoConstraints:
             X: sp.Matrix, U: sp.Matrix,
             Weight_Y: np.ndarray,
             file_name_without_ext: str):
+        """
+        Generates Python function files from symbolic Jacobian matrices
+          and returns references to the generated functions and their file names.
+
+        This method takes symbolic Jacobians of the system dynamics and measurement functions, generates corresponding Python code files,
+        imports the generated functions,
+          and returns them along with their file names and the weighted measurement Jacobian.
+
+        Args:
+            fxu_jacobian_X (sp.Matrix): Symbolic Jacobian of the system dynamics
+              with respect to state variables.
+            fxu_jacobian_U (sp.Matrix): Symbolic Jacobian of the system dynamics
+              with respect to input variables.
+            hx_jacobian (sp.Matrix): Symbolic Jacobian of the measurement function
+              with respect to state variables.
+            X (sp.Matrix): Symbolic state variable vector.
+            U (sp.Matrix): Symbolic input variable vector.
+            Weight_Y (np.ndarray): Weighting matrix for the measurement function.
+            file_name_without_ext (str): Base name for the generated Python files (without extension).
+
+        Returns:
+            tuple:
+                - (function, str): Tuple containing the imported function
+                  for fxu_jacobian_X and its file name.
+                - (function, str): Tuple containing the imported function
+                  for fxu_jacobian_U and its file name.
+                - (function, str): Tuple containing the imported function
+                  for hx_jacobian and its file name.
+                - sp.Matrix: Weighted measurement Jacobian matrix.
+        """
 
         file_name_without_ext_to_write = f"{file_name_without_ext}_adaptive_mpc"
 
@@ -482,6 +512,17 @@ class AdaptiveMPC_NoConstraints:
 
     def solve(self, reference_trajectory: MPC_ReferenceTrajectory,
               X_augmented: np.ndarray):
+        """
+        Solves for the optimal control input increments (delta_U)
+          based on the provided reference trajectory and augmented state.
+        Args:
+            reference_trajectory (MPC_ReferenceTrajectory): The reference trajectory
+              object containing desired future states.
+            X_augmented (np.ndarray): The current augmented state vector.
+        Returns:
+            np.ndarray: The computed optimal control input increments (delta_U).
+        """
+
         # (Phi^T * Phi + Weight)^-1 * Phi^T * (Trajectory - Fx)
         delta_U = self.solver_factor @ reference_trajectory.calculate_dif(
             self.prediction_matrices.F_ndarray @ X_augmented)
