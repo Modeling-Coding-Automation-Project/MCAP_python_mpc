@@ -56,13 +56,25 @@ def create_reference_trajectory(is_ref_trajectory: bool, Np: int,
 
 def update_solver_factor(Phi: np.ndarray, Weight_U_Nc: np.ndarray):
     """
-    Updates the solver factor for the MPC controller.
+    Updates the solver factor matrix for a linear MPC problem
+      using QR decomposition for improved numerical stability.
+
+    This function computes a solver factor that can be used to
+      efficiently solve least-squares problems of the form:
+        min ||Phi * x - y||^2 + x.T * Weight_U_Nc * x
+    by augmenting the system and applying QR decomposition.
+
     Args:
-        Phi (np.ndarray): The prediction matrix Phi.
-        Weight_U_Nc (np.ndarray): The weight matrix for the control input.
+        Phi (np.ndarray): The prediction matrix of shape (N, M).
+        Weight_U_Nc (np.ndarray): The control weighting matrix of shape (M, M).
+
     Returns:
-        None
+        np.ndarray: The computed solver factor matrix.
+
+    Raises:
+        ValueError: If the dimensions of `Phi` and `Weight_U_Nc` are not compatible.
     """
+
     if (Phi.shape[1] != Weight_U_Nc.shape[0]) or (Phi.shape[1] != Weight_U_Nc.shape[1]):
         raise ValueError("Weight must have compatible dimensions.")
 
