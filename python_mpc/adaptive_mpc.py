@@ -484,31 +484,36 @@ class AdaptiveMPC_NoConstraints:
 
     def update_solver_factor(self, Phi: np.ndarray, Weight_U_Nc: np.ndarray):
         """
-        Updates the solver factor used in the MPC optimization
-          by solving a linear system.
-        Parameters
-        ----------
-        Phi : np.ndarray
-            The regressor matrix, typically of shape (N, Nc),
-              where N is the number of samples and Nc is the control horizon.
-        Weight_U_Nc : np.ndarray
-            The weighting matrix for the control input,
-              expected to be square and of shape (Nc, Nc).
-        Raises
-        ------
-        ValueError
-            If the dimensions of `Phi` and `Weight_U_Nc` are not compatible.
-        Notes
-        -----
-        The solver factor is computed as the solution to the linear system:
-            (Phi.T @ Phi + Weight_U_Nc) * X = Phi.T
-        and stored in `self.solver_factor`.
+        Updates the solver factor used for efficient solution of least squares problems in MPC.
+        This method computes and stores a solver factor matrix
+          based on the provided regressor matrix `Phi`
+        and the control input weighting matrix `Weight_U_Nc`.
+          It uses QR decomposition for improved numerical
+        stability over direct inversion or normal equations.
+        Args:
+            Phi (np.ndarray): The regressor matrix with shape (N, M),
+              where N is the number of samples and M is the number of control moves.
+            Weight_U_Nc (np.ndarray): The control input weighting matrix
+              with shape (M, M), typically positive definite.
+        Raises:
+            ValueError: If the dimensions of `Phi` and `Weight_U_Nc` are not compatible.
+        Side Effects:
+            Updates `self.solver_factor` with the computed solver factor matrix.
         """
 
         if (Phi.shape[1] != Weight_U_Nc.shape[0]) or (Phi.shape[1] != Weight_U_Nc.shape[1]):
             raise ValueError("Weight must have compatible dimensions.")
 
-        self.solver_factor = np.linalg.solve(Phi.T @ Phi + Weight_U_Nc, Phi.T)
+        # self.solver_factor = np.linalg.solve(Phi.T @ Phi + Weight_U_Nc, Phi.T)
+
+        # solve with QR decomposition for better numerical stability
+        A_augmented = np.vstack((Phi, np.sqrt(Weight_U_Nc)))
+        Y_augmented = np.vstack(
+            (np.eye(Phi.shape[0]), np.zeros((Phi.shape[1], Phi.shape[0]))))
+
+        Q, R = np.linalg.qr(A_augmented)
+
+        self.solver_factor = np.linalg.solve(R, Q.T @ Y_augmented)
 
     def solve(self, reference_trajectory: MPC_ReferenceTrajectory,
               X_augmented: np.ndarray):
