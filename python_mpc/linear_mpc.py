@@ -66,7 +66,16 @@ def update_solver_factor(Phi: np.ndarray, Weight_U_Nc: np.ndarray):
     if (Phi.shape[1] != Weight_U_Nc.shape[0]) or (Phi.shape[1] != Weight_U_Nc.shape[1]):
         raise ValueError("Weight must have compatible dimensions.")
 
-    solver_factor = np.linalg.solve(Phi.T @ Phi + Weight_U_Nc, Phi.T)
+    # solver_factor = np.linalg.solve(Phi.T @ Phi + Weight_U_Nc, Phi.T)
+
+    # solve with QR decomposition for better numerical stability
+    A_augmented = np.vstack((Phi, np.sqrt(Weight_U_Nc)))
+    Y_augmented = np.vstack(
+        (np.eye(Phi.shape[0]), np.zeros((Phi.shape[1], Phi.shape[0]))))
+
+    Q, R = np.linalg.qr(A_augmented)
+
+    solver_factor = np.linalg.solve(R, Q.T @ Y_augmented)
 
     return solver_factor
 
