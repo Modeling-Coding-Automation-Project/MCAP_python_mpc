@@ -26,6 +26,8 @@ from mpc_utility.linear_solver_utility import symbolic_to_numeric_matrix
 from external_libraries.MCAP_python_control.python_control.kalman_filter import LinearKalmanFilter
 from external_libraries.MCAP_python_control.python_control.kalman_filter import DelayedVectorObject
 
+USE_QR_DECOMPOSITION_FOR_SOLVER_FACTOR = True
+
 # Common Functions
 
 
@@ -78,16 +80,17 @@ def update_solver_factor(Phi: np.ndarray, Weight_U_Nc: np.ndarray):
     if (Phi.shape[1] != Weight_U_Nc.shape[0]) or (Phi.shape[1] != Weight_U_Nc.shape[1]):
         raise ValueError("Weight must have compatible dimensions.")
 
-    # solver_factor = np.linalg.solve(Phi.T @ Phi + Weight_U_Nc, Phi.T)
+    if USE_QR_DECOMPOSITION_FOR_SOLVER_FACTOR:
+        # solve with QR decomposition for better numerical stability
+        A_augmented = np.vstack((Phi, np.sqrt(Weight_U_Nc)))
+        Y_augmented = np.vstack(
+            (np.eye(Phi.shape[0]), np.zeros((Phi.shape[1], Phi.shape[0]))))
 
-    # solve with QR decomposition for better numerical stability
-    A_augmented = np.vstack((Phi, np.sqrt(Weight_U_Nc)))
-    Y_augmented = np.vstack(
-        (np.eye(Phi.shape[0]), np.zeros((Phi.shape[1], Phi.shape[0]))))
+        Q, R = np.linalg.qr(A_augmented)
 
-    Q, R = np.linalg.qr(A_augmented)
-
-    solver_factor = np.linalg.solve(R, Q.T @ Y_augmented)
+        solver_factor = np.linalg.solve(R, Q.T @ Y_augmented)
+    else:
+        solver_factor = np.linalg.solve(Phi.T @ Phi + Weight_U_Nc, Phi.T)
 
     return solver_factor
 
