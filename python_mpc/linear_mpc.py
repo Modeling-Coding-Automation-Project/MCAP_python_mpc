@@ -648,18 +648,10 @@ class LTV_MPC_NoConstraints:
         prediction_matrices.Phi_F_updater_function = \
             self.state_space_initializer.LTV_MPC_Phi_F_updater_function
 
-        A_SparseAvailable = create_sparse_available(self.augmented_ss.A)
-        B_SparseAvailable = create_sparse_available(self.augmented_ss.B)
-        C_SparseAvailable = create_sparse_available(self.augmented_ss.C)
-
-        prediction_matrices.substitute_ABC_numeric_expression(
-            A_SparseAvailable, B_SparseAvailable, C_SparseAvailable)
-
-        prediction_matrices.build_matrices_numeric_expression(
-            A=A_SparseAvailable,
-            B=B_SparseAvailable,
-            C=C_SparseAvailable
-        )
+        prediction_matrices.create_build_SparseAvailable(
+            self.augmented_ss.A,
+            self.augmented_ss.B,
+            self.augmented_ss.C)
 
         prediction_matrices.update_Phi_F_runtime(
             parameters_struct=self.parameters_struct)

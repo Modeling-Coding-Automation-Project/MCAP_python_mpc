@@ -311,7 +311,8 @@ class MPC_PredictionMatrices:
         self.B_symbolic = B
         self.C_symbolic = C
 
-    def substitute_ABC_numeric_expression(self, A: np.ndarray, B: np.ndarray, C: np.ndarray):
+    def substitute_ABC_numeric_expression(
+            self, A: np.ndarray, B: np.ndarray, C: np.ndarray):
         """
         Substitutes the provided numeric matrices A, B, and C into their respective symbolic expressions,
         and updates the corresponding numeric expressions and sparse availability flags.
@@ -394,6 +395,24 @@ class MPC_PredictionMatrices:
             = self.build_Phi_expression(
                 A, B, C,
                 self.A_SparseAvailable, self.B_SparseAvailable, self.C_SparseAvailable)
+
+    def create_build_SparseAvailable(
+            self, A: sp.Matrix, B: sp.Matrix, C: sp.Matrix):
+
+        self.A_SparseAvailable = create_sparse_available(A)
+        self.B_SparseAvailable = create_sparse_available(B)
+        self.C_SparseAvailable = create_sparse_available(C)
+
+        _, self.F_SparseAvailable \
+            = self.build_F_expression(
+                self.A_SparseAvailable, self.C_SparseAvailable,
+                self.A_SparseAvailable, self.C_SparseAvailable)
+        _, self.Phi_SparseAvailable \
+            = self.build_Phi_expression(
+                self.A_SparseAvailable, self.B_SparseAvailable,
+                self.C_SparseAvailable,
+                self.A_SparseAvailable, self.B_SparseAvailable,
+                self.C_SparseAvailable)
 
     def update_Phi_F_runtime(self, parameters_struct):
         """
