@@ -11,6 +11,8 @@ as well as the generation of prediction matrices for MPC.
 import numpy as np
 import sympy as sp
 
+SPARSE_AVAILABLE_ZERO_LIMIT = 1e-10
+
 
 def symbolic_to_numeric_matrix(symbolic_matrix: sp.Matrix) -> np.ndarray:
     """
@@ -51,11 +53,17 @@ def create_sparse_available(mat: sp.Matrix):
     if not isinstance(mat, sp.MatrixBase):
         raise ValueError("Input must be a sympy matrix.")
 
+    mat_ndarray = symbolic_to_numeric_matrix(mat)
+    nonzero_elements = mat_ndarray[mat_ndarray != 0.0]
+
+    matrix_value_median = np.median(np.abs(nonzero_elements))
+
     numeric_matrix = np.zeros(
         (mat.shape[0], mat.shape[1]), dtype=int)
     for i in range(mat.shape[0]):
         for j in range(mat.shape[1]):
-            if float(mat[i, j]) != 0.0:
+            if np.abs(float(mat[i, j])) > \
+                    (matrix_value_median * SPARSE_AVAILABLE_ZERO_LIMIT):
                 numeric_matrix[i, j] = 1
 
     return sp.SparseMatrix(numeric_matrix)

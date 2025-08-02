@@ -234,6 +234,10 @@ class LTI_MPC_NoConstraints:
         self.solver_factor = np.zeros(
             (self.AUGMENTED_INPUT_SIZE * self.Nc,
              self.AUGMENTED_OUTPUT_SIZE * self.Np))
+        self.solver_factor_SparseAvailable = sp.zeros(
+            self.AUGMENTED_INPUT_SIZE * self.Nc,
+            self.AUGMENTED_OUTPUT_SIZE * self.Np)
+
         self.update_solver_factor(
             self.prediction_matrices.Phi_ndarray, self.Weight_U_Nc)
 
