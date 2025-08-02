@@ -53,18 +53,28 @@ def create_sparse_available(mat: sp.Matrix):
     if not isinstance(mat, sp.MatrixBase):
         raise ValueError("Input must be a sympy matrix.")
 
-    mat_ndarray = symbolic_to_numeric_matrix(mat)
-    nonzero_elements = mat_ndarray[mat_ndarray != 0.0]
+    numeric_matrix = np.zeros(
+        (mat.shape[0], mat.shape[1]), dtype=int)
+
+    mask = sp.zeros(mat.shape[0], mat.shape[1])
+    for i in range(mat.shape[0]):
+        for j in range(mat.shape[1]):
+            if mat[i, j].free_symbols:
+                mask[i, j] = 0.0
+                numeric_matrix[i, j] = 1.0
+            else:
+                mask[i, j] = mat[i, j]
+
+    mask_ndarray = symbolic_to_numeric_matrix(mask)
+    nonzero_elements = mask_ndarray[mask_ndarray != 0.0]
 
     matrix_value_max = np.max(np.abs(nonzero_elements))
 
-    numeric_matrix = np.zeros(
-        (mat.shape[0], mat.shape[1]), dtype=int)
     for i in range(mat.shape[0]):
         for j in range(mat.shape[1]):
-            if np.abs(float(mat[i, j])) > \
+            if np.abs(float(mask[i, j])) > \
                     (matrix_value_max * SPARSE_AVAILABLE_ZERO_LIMIT):
-                numeric_matrix[i, j] = 1
+                numeric_matrix[i, j] = 1.0
 
     return sp.SparseMatrix(numeric_matrix)
 

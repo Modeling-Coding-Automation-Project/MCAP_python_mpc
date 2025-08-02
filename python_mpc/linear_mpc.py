@@ -551,8 +551,14 @@ class LTV_MPC_NoConstraints:
         self.solver_factor = np.zeros(
             (self.AUGMENTED_INPUT_SIZE * self.Nc,
              self.AUGMENTED_OUTPUT_SIZE * self.Np))
+        self.solver_factor_SparseAvailable = sp.zeros(
+            self.AUGMENTED_INPUT_SIZE * self.Nc,
+            self.AUGMENTED_OUTPUT_SIZE * self.Np)
+
         self.update_solver_factor(
             self.prediction_matrices.Phi_ndarray, self.Weight_U_Nc)
+        self.update_solver_factor_SparseAvailable(
+            self.prediction_matrices.Phi_SparseAvailable)
 
         self.Y_store = DelayedVectorObject(self.AUGMENTED_OUTPUT_SIZE,
                                            self.Number_of_Delay)
@@ -642,6 +648,19 @@ class LTV_MPC_NoConstraints:
         prediction_matrices.Phi_F_updater_function = \
             self.state_space_initializer.LTV_MPC_Phi_F_updater_function
 
+        A_SparseAvailable = create_sparse_available(self.augmented_ss.A)
+        B_SparseAvailable = create_sparse_available(self.augmented_ss.B)
+        C_SparseAvailable = create_sparse_available(self.augmented_ss.C)
+
+        prediction_matrices.substitute_ABC_numeric_expression(
+            A_SparseAvailable, B_SparseAvailable, C_SparseAvailable)
+
+        prediction_matrices.build_matrices_numeric_expression(
+            A=A_SparseAvailable,
+            B=B_SparseAvailable,
+            C=C_SparseAvailable
+        )
+
         prediction_matrices.update_Phi_F_runtime(
             parameters_struct=self.parameters_struct)
 
@@ -654,6 +673,12 @@ class LTV_MPC_NoConstraints:
     def update_solver_factor(self, Phi: np.ndarray, Weight_U_Nc: np.ndarray):
         self.solver_factor = update_solver_factor(
             Phi, Weight_U_Nc)
+
+    def update_solver_factor_SparseAvailable(
+            self,
+            Phi_SparseAvailable: sp.Matrix):
+        self.solver_factor_SparseAvailable = update_solver_factor_SparseAvailable(
+            Phi_SparseAvailable)
 
     def solve(self, reference_trajectory: MPC_ReferenceTrajectory,
               X_augmented: np.ndarray):
