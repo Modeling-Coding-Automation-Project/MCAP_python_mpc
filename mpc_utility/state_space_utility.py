@@ -358,11 +358,6 @@ class MPC_PredictionMatrices:
         self.Phi_ndarray = symbolic_to_numeric_matrix(
             self.Phi_numeric_expression)
 
-        self.F_SparseAvailable = self.create_sparse_available(
-            self.F_numeric_expression)
-        self.Phi_SparseAvailable = self.create_sparse_available(
-            self.Phi_numeric_expression)
-
     def build_matrices_numeric_expression(
             self, A: sp.Matrix, B: sp.Matrix, C: sp.Matrix) -> tuple:
         """
@@ -372,8 +367,13 @@ class MPC_PredictionMatrices:
             B (sp.Matrix): Input matrix.
             C (sp.Matrix): Output matrix.
         """
-        self.F_numeric_expression = self._build_F_expression(A, C)
-        self.Phi_numeric_expression = self._build_Phi_expression(A, B, C)
+        self.F_numeric_expression, self.F_SparseAvailable \
+            = self.build_F_expression(
+                A, C, self.A_SparseAvailable, self.C_SparseAvailable)
+        self.Phi_numeric_expression, self.Phi_SparseAvailable \
+            = self.build_Phi_expression(
+                A, B, C,
+                self.A_SparseAvailable, self.B_SparseAvailable, self.C_SparseAvailable)
 
     def update_Phi_F_runtime(self, parameters_struct):
         """
@@ -422,66 +422,106 @@ class MPC_PredictionMatrices:
             self.Phi_ndarray = Phi
             self.F_ndarray = F
 
-    def _build_F_expression(self, A: sp.Matrix, C: sp.Matrix) -> sp.Matrix:
+    def build_F_expression(
+            self,
+            A: sp.Matrix, C: sp.Matrix,
+            A_SparseAvailable: sp.Matrix, C_SparseAvailable: sp.Matrix) -> sp.Matrix:
         """
-        Constructs the F expression matrix for a given state-space system over a prediction horizon.
-        This method computes the F matrix used in Model Predictive Control (MPC),
-        which relates the initial state to the predicted outputs over the prediction horizon.
-        The F matrix is constructed by stacking the product of the output matrix
-        `C` and the state transition matrix `A` for each step in the prediction horizon.
+        Constructs the F expression and its sparsity pattern
+          for a given state-space system over a prediction horizon.
 
         Args:
             A (sp.Matrix): The state transition matrix of the system.
             C (sp.Matrix): The output matrix of the system.
+            A_SparseAvailable (sp.Matrix): The sparsity pattern matrix corresponding to A.
+            C_SparseAvailable (sp.Matrix): The sparsity pattern matrix corresponding to C.
 
         Returns:
-            sp.Matrix: The constructed F expression matrix of shape (OUTPUT_SIZE * Np, STATE_SIZE).
+            Tuple[sp.Matrix, sp.Matrix]:
+                - F_expression: The block matrix stacking C * A^(i+1) for i in range(Np),
+                  representing the predicted outputs over the horizon.
+                - F_SparseAvailable: The corresponding sparsity pattern matrix for F_expression.
+
+        Notes:
+            - self.Np: The prediction horizon length.
+            - self.OUTPUT_SIZE: The number of outputs.
+            - self.STATE_SIZE: The number of states.
+            - The method uses symbolic matrices from sympy (sp).
+            - The sparsity pattern is processed using self.create_sparse_available.
         """
 
         F_expression = sp.zeros(self.OUTPUT_SIZE * self.Np, self.STATE_SIZE)
+        F_SparseAvailable = sp.zeros(
+            self.OUTPUT_SIZE * self.Np, self.STATE_SIZE)
 
         for i in range(self.Np):
             F = C * A**(i + 1)
+            F_SA = C_SparseAvailable * A_SparseAvailable**(i + 1)
 
             F_expression[i * self.OUTPUT_SIZE:(i + 1) *
                          self.OUTPUT_SIZE, :] = F
+            F_SparseAvailable[i * self.OUTPUT_SIZE:(i + 1) *
+                              self.OUTPUT_SIZE, :] = F_SA
 
-        return F_expression
+        F_SparseAvailable = self.create_sparse_available(F_SparseAvailable)
 
-    def _build_Phi_expression(self, A: sp.Matrix, B: sp.Matrix, C: sp.Matrix) -> sp.Matrix:
+        return F_expression, F_SparseAvailable
+
+    def build_Phi_expression(
+            self, A: sp.Matrix, B: sp.Matrix, C: sp.Matrix,
+            A_SparseAvailable: sp.Matrix,
+            B_SparseAvailable: sp.Matrix,
+            C_SparseAvailable: sp.Matrix) -> sp.Matrix:
         """
-        Constructs the Phi matrix expression for a state-space model used in Model Predictive Control (MPC).
+        Constructs the Phi expression and its corresponding sparse availability matrix for a state-space model
+        over a prediction horizon.
 
-        The Phi matrix maps future control inputs to future outputs over the prediction horizon. It is constructed
-        using the system matrices A, B, and C, and the controller's prediction (Np) and control (Nc) horizons.
+        This method builds the block-lower-triangular Phi matrix used in Model Predictive Control (MPC),
+        which relates future control moves to predicted outputs over the prediction horizon. It also constructs
+        a corresponding matrix indicating the sparsity pattern of available elements.
 
         Args:
-            A (sp.Matrix): The state transition matrix of the system.
-            B (sp.Matrix): The input matrix of the system.
-            C (sp.Matrix): The output matrix of the system.
+            A (sp.Matrix): State transition matrix of the system.
+            B (sp.Matrix): Input matrix of the system.
+            C (sp.Matrix): Output matrix of the system.
+            A_SparseAvailable (sp.Matrix): Binary matrix indicating available (nonzero) elements in A.
+            B_SparseAvailable (sp.Matrix): Binary matrix indicating available (nonzero) elements in B.
+            C_SparseAvailable (sp.Matrix): Binary matrix indicating available (nonzero) elements in C.
 
         Returns:
-            sp.Matrix: The constructed Phi matrix of size (OUTPUT_SIZE * Np, INPUT_SIZE * Nc).
+            Tuple[sp.Matrix, sp.Matrix]:
+                - Phi_expression: The constructed Phi matrix of size (OUTPUT_SIZE * Np, INPUT_SIZE * Nc).
+                - Phi_SparseAvailable: The corresponding sparse availability matrix, indicating which elements
+                    in Phi_expression are available (nonzero).
         """
 
         Phi_expression = sp.zeros(self.OUTPUT_SIZE * self.Np,
                                   self.INPUT_SIZE * self.Nc)
+        Phi_SparseAvailable = sp.zeros(self.OUTPUT_SIZE * self.Np,
+                                       self.INPUT_SIZE * self.Nc)
 
         for i in range(self.Nc):
             for j in range(i, self.Np):
                 exponent = j - i
                 if exponent == 0:
                     blok = C * B
+                    blok_SA = C_SparseAvailable * B_SparseAvailable
                 else:
                     blok = C * \
                         A**exponent * B
+                    blok_SA = C_SparseAvailable * \
+                        A_SparseAvailable**exponent * B_SparseAvailable
 
                 r0, c0 = j * self.OUTPUT_SIZE, i * self.INPUT_SIZE
 
                 Phi_expression[r0:r0 + self.OUTPUT_SIZE,
                                c0:c0 + self.INPUT_SIZE] = blok
+                Phi_SparseAvailable[r0:r0 + self.OUTPUT_SIZE,
+                                    c0:c0 + self.INPUT_SIZE] = blok_SA
 
-        return Phi_expression
+        Phi_SparseAvailable = self.create_sparse_available(Phi_SparseAvailable)
+
+        return Phi_expression, Phi_SparseAvailable
 
 
 class MPC_ReferenceTrajectory:
