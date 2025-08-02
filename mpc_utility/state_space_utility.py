@@ -68,13 +68,14 @@ def create_sparse_available(mat: sp.Matrix):
     mask_ndarray = symbolic_to_numeric_matrix(mask)
     nonzero_elements = mask_ndarray[mask_ndarray != 0.0]
 
-    matrix_value_max = np.max(np.abs(nonzero_elements))
+    if nonzero_elements.size > 0:
+        matrix_value_max = np.max(np.abs(nonzero_elements))
 
-    for i in range(mat.shape[0]):
-        for j in range(mat.shape[1]):
-            if np.abs(float(mask[i, j])) > \
-                    (matrix_value_max * SPARSE_AVAILABLE_ZERO_LIMIT):
-                numeric_matrix[i, j] = 1.0
+        for i in range(mat.shape[0]):
+            for j in range(mat.shape[1]):
+                if np.abs(float(mask[i, j])) > \
+                        (matrix_value_max * SPARSE_AVAILABLE_ZERO_LIMIT):
+                    numeric_matrix[i, j] = 1.0
 
     return sp.SparseMatrix(numeric_matrix)
 
