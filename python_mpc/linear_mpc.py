@@ -98,6 +98,28 @@ def update_solver_factor(Phi: np.ndarray, Weight_U_Nc: np.ndarray):
 
 def update_solver_factor_SparseAvailable(
         Phi_SparseAvailable: sp.SparseMatrix):
+    """
+    Updates the solver factor for a sparse matrix representation.
+
+    This function computes an intermediate matrix by multiplying the inverse of the product
+    of the transpose of the input sparse matrix and itself with the transpose of the input matrix.
+    It then creates and returns a solver factor using this intermediate result.
+
+    Args:
+        Phi_SparseAvailable (sp.SparseMatrix): The input sparse matrix
+          for which the solver factor is to be updated.
+
+    Returns:
+        solver_factor_SparseAvailable: The updated solver factor
+          based on the input sparse matrix.
+
+    Note:
+        - The function assumes the existence of `create_sparse_available`
+          and that `sp` provides the necessary sparse matrix operations.
+        - The implementation currently uses a placeholder for the inverse
+          calculation (`sp.ones`),
+            which may need to be replaced with the actual inverse computation.
+    """
 
     Phi_T_Phi_inv = sp.ones(
         Phi_SparseAvailable.shape[1], Phi_SparseAvailable.shape[1])

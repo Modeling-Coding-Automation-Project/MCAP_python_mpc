@@ -398,6 +398,27 @@ class MPC_PredictionMatrices:
 
     def create_build_SparseAvailable(
             self, A: sp.Matrix, B: sp.Matrix, C: sp.Matrix):
+        """
+        Initializes and builds sparse representations of the state-space matrices A, B, and C.
+
+        This method creates sparse-available versions of the input matrices using the
+        `create_sparse_available` function and stores them as instance attributes.
+        It then computes and stores the sparse-available forms of the F and Phi expressions
+        using the `build_F_expression` and `build_Phi_expression` methods, respectively.
+
+        Args:
+            A (sp.Matrix): The state matrix of the system.
+            B (sp.Matrix): The input matrix of the system.
+            C (sp.Matrix): The output matrix of the system.
+
+        Side Effects:
+            Sets the following instance attributes:
+                - A_SparseAvailable: Sparse-available version of A.
+                - B_SparseAvailable: Sparse-available version of B.
+                - C_SparseAvailable: Sparse-available version of C.
+                - F_SparseAvailable: Sparse-available F expression.
+                - Phi_SparseAvailable: Sparse-available Phi expression.
+        """
 
         self.A_SparseAvailable = create_sparse_available(A)
         self.B_SparseAvailable = create_sparse_available(B)
