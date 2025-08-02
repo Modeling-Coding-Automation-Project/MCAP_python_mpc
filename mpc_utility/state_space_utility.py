@@ -172,13 +172,19 @@ class MPC_PredictionMatrices:
         self.A_symbolic = None
         self.B_symbolic = None
         self.C_symbolic = None
+
+        self.A_SparseAvailable = None
+        self.B_SparseAvailable = None
+        self.C_SparseAvailable = None
+
         self.A_numeric_expression = None
         self.B_numeric_expression = None
         self.C_numeric_expression = None
+
         self.initialize_ABC()
 
-        self._exponential_A_list = self._generate_exponential_A_list(
-            self.A_symbolic)
+        self.F_SparseAvailable = None
+        self.Phi_SparseAvailable = None
 
         self.F_numeric_expression = None
         self.Phi_numeric_expression = None
@@ -192,16 +198,10 @@ class MPC_PredictionMatrices:
 
     def initialize_ABC(self):
         """
-        Initializes symbolic matrices A, B, and C with symbolic variables.
-        This method creates symbolic matrices for the state, input, and output
-        matrices, which will be used for symbolic manipulation and substitution.
+        Initializes the symbolic matrices A, B, and C with zeros.
+        This method sets up the symbolic matrices with the appropriate dimensions
+        based on the state, input, and output sizes.
         """
-        self.A_symbolic = sp.Matrix(self.STATE_SIZE, self.STATE_SIZE,
-                                    lambda i, j: sp.symbols(f'a{i+1}{j+1}'))
-        self.B_symbolic = sp.Matrix(self.STATE_SIZE, self.INPUT_SIZE,
-                                    lambda i, j: sp.symbols(f'b{i+1}{j+1}'))
-        self.C_symbolic = sp.Matrix(self.OUTPUT_SIZE, self.STATE_SIZE,
-                                    lambda i, j: sp.symbols(f'c{i+1}{j+1}'))
 
         self.A_numeric_expression = sp.Matrix(self.STATE_SIZE, self.STATE_SIZE,
                                               lambda i, j: 0.0)
@@ -210,34 +210,23 @@ class MPC_PredictionMatrices:
         self.C_numeric_expression = sp.Matrix(self.OUTPUT_SIZE, self.STATE_SIZE,
                                               lambda i, j: 0.0)
 
-    def generate_symbolic_substitution(self, A: np.ndarray, B: np.ndarray, C: np.ndarray):
-        """
-        Generates symbolic variables for the elements of matrices A, B, and C,
-        and maps them to their corresponding numeric values.
-        Args:
-            A (np.ndarray): State matrix.
-            B (np.ndarray): Input matrix.
-            C (np.ndarray): Output matrix.
-        """
-        # Generate symbolic variables and map them to A's elements
-        for i in range(A.shape[0]):
-            for j in range(A.shape[1]):
-                symbol = sp.symbols(f'a{i+1}{j+1}')
-                self.ABC_values[symbol] = A[i, j]
-
-        # Generate symbolic variables and map them to B's elements
-        for i in range(B.shape[0]):
-            for j in range(B.shape[1]):
-                symbol = sp.symbols(f'b{i+1}{j+1}')
-                self.ABC_values[symbol] = B[i, j]
-
-        # Generate symbolic variables and map them to C's elements
-        for i in range(C.shape[0]):
-            for j in range(C.shape[1]):
-                symbol = sp.symbols(f'c{i+1}{j+1}')
-                self.ABC_values[symbol] = C[i, j]
-
     def substitute_ABC_symbolic(self, A: sp.Matrix, B: sp.Matrix, C: sp.Matrix):
+        """
+        Substitutes the symbolic state-space matrices A, B, and C.
+
+        Parameters:
+            A (sp.Matrix): The symbolic state matrix (A) as a SymPy matrix.
+            B (sp.Matrix): The symbolic input matrix (B) as a SymPy matrix.
+            C (sp.Matrix): The symbolic output matrix (C) as a SymPy matrix.
+
+        Raises:
+            ValueError: If any of A, B, or C is not a SymPy matrix.
+
+        Sets:
+            self.A_symbolic: The symbolic state matrix.
+            self.B_symbolic: The symbolic input matrix.
+            self.C_symbolic: The symbolic output matrix.
+        """
 
         if not isinstance(A, sp.MatrixBase):
             raise ValueError("A must be a sympy matrix.")
@@ -250,6 +239,29 @@ class MPC_PredictionMatrices:
         self.B_symbolic = B
         self.C_symbolic = C
 
+    def substitute_numeric_matrix_expression(self, mat: np.ndarray) -> sp.Matrix:
+        """
+        Substitutes numeric values into a symbolic matrix.
+
+        Args:
+            mat (np.ndarray): The numeric matrix to substitute.
+
+        Returns:
+            sp.Matrix: The symbolic matrix with substituted values.
+        """
+        if not isinstance(mat, np.ndarray):
+            raise ValueError("Input must be a numpy ndarray.")
+
+        symbolic_mat = sp.Matrix(mat.shape[0], mat.shape[1],
+                                 lambda i, j: sp.symbols(f'm{i+1}{j+1}'))
+        subs_dict = {}
+        for i in range(mat.shape[0]):
+            for j in range(mat.shape[1]):
+                symbol = sp.symbols(f'm{i+1}{j+1}')
+                subs_dict[symbol] = mat[i, j]
+
+        return symbolic_mat.subs(subs_dict)
+
     def substitute_ABC_numeric_expression(self, A: np.ndarray, B: np.ndarray, C: np.ndarray):
         """
         Substitutes numeric values into the symbolic matrices A, B, and C.
@@ -258,26 +270,13 @@ class MPC_PredictionMatrices:
             B (np.ndarray): Input matrix.
             C (np.ndarray): Output matrix.
         """
-        self.A_symbolic = sp.Matrix(self.STATE_SIZE, self.STATE_SIZE,
-                                    lambda i, j: sp.symbols(f'a{i+1}{j+1}'))
-        for i in range(A.shape[0]):
-            for j in range(A.shape[1]):
-                self.A_numeric_expression[i, j] = self.A_symbolic[i, j].subs(
-                    self.ABC_values)
 
-        self.B_symbolic = sp.Matrix(self.STATE_SIZE, self.INPUT_SIZE,
-                                    lambda i, j: sp.symbols(f'b{i+1}{j+1}'))
-        for i in range(B.shape[0]):
-            for j in range(B.shape[1]):
-                self.B_numeric_expression[i, j] = self.B_symbolic[i, j].subs(
-                    self.ABC_values)
-
-        self.C_symbolic = sp.Matrix(self.OUTPUT_SIZE, self.STATE_SIZE,
-                                    lambda i, j: sp.symbols(f'c{i+1}{j+1}'))
-        for i in range(C.shape[0]):
-            for j in range(C.shape[1]):
-                self.C_numeric_expression[i, j] = self.C_symbolic[i, j].subs(
-                    self.ABC_values)
+        self.A_numeric_expression = self.substitute_numeric_matrix_expression(
+            A)
+        self.B_numeric_expression = self.substitute_numeric_matrix_expression(
+            B)
+        self.C_numeric_expression = self.substitute_numeric_matrix_expression(
+            C)
 
         self._exponential_A_list = self._generate_exponential_A_list(
             self.A_numeric_expression)
@@ -291,14 +290,22 @@ class MPC_PredictionMatrices:
             B (np.ndarray): Input matrix.
             C (np.ndarray): Output matrix.
         """
-        if not isinstance(A, np.ndarray):
+        if isinstance(A, sp.MatrixBase):
             A = symbolic_to_numeric_matrix(A)
-        if not isinstance(B, np.ndarray):
+        else:
+            if not isinstance(A, np.ndarray):
+                raise ValueError("A must be a numpy ndarray or sympy matrix.")
+        if isinstance(B, sp.MatrixBase):
             B = symbolic_to_numeric_matrix(B)
-        if not isinstance(C, np.ndarray):
+        else:
+            if not isinstance(B, np.ndarray):
+                raise ValueError("B must be a numpy ndarray or sympy matrix.")
+        if isinstance(C, sp.MatrixBase):
             C = symbolic_to_numeric_matrix(C)
+        else:
+            if not isinstance(C, np.ndarray):
+                raise ValueError("C must be a numpy ndarray or sympy matrix.")
 
-        self.generate_symbolic_substitution(A, B, C)
         self.substitute_ABC_numeric_expression(A, B, C)
 
         self.build_matrices_numeric_expression(
