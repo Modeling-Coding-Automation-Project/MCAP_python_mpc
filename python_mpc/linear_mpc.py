@@ -23,6 +23,7 @@ from mpc_utility.state_space_utility import MPC_ReferenceTrajectory
 from mpc_utility.state_space_utility_deploy import LTV_MPC_StateSpaceInitializer
 from mpc_utility.linear_solver_utility import LMPC_QP_Solver
 from mpc_utility.linear_solver_utility import symbolic_to_numeric_matrix
+from mpc_utility.linear_solver_utility import create_sparse_available
 from external_libraries.MCAP_python_control.python_control.kalman_filter import LinearKalmanFilter
 from external_libraries.MCAP_python_control.python_control.kalman_filter import DelayedVectorObject
 
@@ -93,6 +94,18 @@ def update_solver_factor(Phi: np.ndarray, Weight_U_Nc: np.ndarray):
         solver_factor = np.linalg.solve(Phi.T @ Phi + Weight_U_Nc, Phi.T)
 
     return solver_factor
+
+
+def update_solver_factor_SparseAvailable(
+        Phi_SparseAvailable: sp.SparseMatrix):
+
+    Phi_T_Phi_inv = sp.ones(
+        Phi_SparseAvailable.shape[1], Phi_SparseAvailable.shape[1])
+
+    solver_factor_SparseAvailable = create_sparse_available(
+        Phi_T_Phi_inv * Phi_SparseAvailable.T)
+
+    return solver_factor_SparseAvailable
 
 
 def solve_LMPC_No_Constraints(solver_factor: np.ndarray, F_ndarray: np.ndarray,
@@ -229,7 +242,9 @@ class LTI_MPC_NoConstraints:
 
         self.Weight_U_Nc = self.update_weight(Weight_U)
 
-        self.prediction_matrices = self.create_prediction_matrices(Weight_Y)
+        self.prediction_matrices: MPC_PredictionMatrices \
+            = self.create_prediction_matrices(
+                Weight_Y)
 
         self.solver_factor = np.zeros(
             (self.AUGMENTED_INPUT_SIZE * self.Nc,
@@ -240,6 +255,8 @@ class LTI_MPC_NoConstraints:
 
         self.update_solver_factor(
             self.prediction_matrices.Phi_ndarray, self.Weight_U_Nc)
+        self.update_solver_factor_SparseAvailable(
+            self.prediction_matrices.Phi_SparseAvailable)
 
         self.Y_store = DelayedVectorObject(self.AUGMENTED_OUTPUT_SIZE,
                                            self.Number_of_Delay)
@@ -315,6 +332,12 @@ class LTI_MPC_NoConstraints:
     def update_solver_factor(self, Phi: np.ndarray, Weight_U_Nc: np.ndarray):
         self.solver_factor = update_solver_factor(
             Phi, Weight_U_Nc)
+
+    def update_solver_factor_SparseAvailable(
+            self,
+            Phi_SparseAvailable: sp.Matrix):
+        self.solver_factor_SparseAvailable = update_solver_factor_SparseAvailable(
+            Phi_SparseAvailable)
 
     def solve(self, reference_trajectory: MPC_ReferenceTrajectory,
               X_augmented: np.ndarray):
