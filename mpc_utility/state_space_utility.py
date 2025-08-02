@@ -10,7 +10,6 @@ as well as the generation of prediction matrices for MPC.
 """
 import numpy as np
 import sympy as sp
-import copy
 
 
 def symbolic_to_numeric_matrix(symbolic_matrix: sp.Matrix) -> np.ndarray:
@@ -29,6 +28,37 @@ def symbolic_to_numeric_matrix(symbolic_matrix: sp.Matrix) -> np.ndarray:
             numeric_matrix[i, j] = float(symbolic_matrix[i, j])
 
     return numeric_matrix
+
+
+def create_sparse_available(mat: sp.Matrix):
+    """
+    Converts a given SymPy matrix into a sparse binary matrix
+      indicating the positions of nonzero elements.
+
+    Parameters
+    ----------
+    mat : sympy.Matrix
+        The input SymPy matrix to be analyzed.
+
+    Returns
+    -------
+    sympy.SparseMatrix
+        A sparse matrix of the same shape as `mat`,
+            where each entry is 1 if the corresponding entry in `mat` is nonzero,
+            and 0 otherwise.
+    """
+
+    if not isinstance(mat, sp.MatrixBase):
+        raise ValueError("Input must be a sympy matrix.")
+
+    numeric_matrix = np.zeros(
+        (mat.shape[0], mat.shape[1]), dtype=int)
+    for i in range(mat.shape[0]):
+        for j in range(mat.shape[1]):
+            if float(mat[i, j]) != 0.0:
+                numeric_matrix[i, j] = 1
+
+    return sp.SparseMatrix(numeric_matrix)
 
 
 class SymbolicStateSpace:
@@ -233,35 +263,6 @@ class MPC_PredictionMatrices:
 
         return symbolic_mat.subs(subs_dict)
 
-    def create_sparse_available(self, mat: sp.Matrix):
-        """
-        Converts a given SymPy matrix into a sparse binary matrix indicating the positions of nonzero elements.
-
-        Parameters
-        ----------
-        mat : sympy.Matrix
-            The input SymPy matrix to be analyzed.
-
-        Returns
-        -------
-        sympy.SparseMatrix
-            A sparse matrix of the same shape as `mat`,
-              where each entry is 1 if the corresponding entry in `mat` is nonzero,
-                and 0 otherwise.
-        """
-
-        if not isinstance(mat, sp.MatrixBase):
-            raise ValueError("Input must be a sympy matrix.")
-
-        numeric_matrix = np.zeros(
-            (mat.shape[0], mat.shape[1]), dtype=int)
-        for i in range(mat.shape[0]):
-            for j in range(mat.shape[1]):
-                if float(mat[i, j]) != 0.0:
-                    numeric_matrix[i, j] = 1
-
-        return sp.SparseMatrix(numeric_matrix)
-
     def substitute_ABC_symbolic(self, A: sp.Matrix, B: sp.Matrix, C: sp.Matrix):
         """
         Substitutes the symbolic state-space matrices A, B, and C.
@@ -315,11 +316,11 @@ class MPC_PredictionMatrices:
         self.C_numeric_expression = self.substitute_numeric_matrix_expression(
             C)
 
-        self.A_SparseAvailable = self.create_sparse_available(
+        self.A_SparseAvailable = create_sparse_available(
             self.A_numeric_expression)
-        self.B_SparseAvailable = self.create_sparse_available(
+        self.B_SparseAvailable = create_sparse_available(
             self.B_numeric_expression)
-        self.C_SparseAvailable = self.create_sparse_available(
+        self.C_SparseAvailable = create_sparse_available(
             self.C_numeric_expression)
 
     def substitute_numeric(self, A: np.ndarray, B: np.ndarray, C: np.ndarray) -> tuple:
@@ -447,7 +448,7 @@ class MPC_PredictionMatrices:
             - self.OUTPUT_SIZE: The number of outputs.
             - self.STATE_SIZE: The number of states.
             - The method uses symbolic matrices from sympy (sp).
-            - The sparsity pattern is processed using self.create_sparse_available.
+            - The sparsity pattern is processed using create_sparse_available.
         """
 
         F_expression = sp.zeros(self.OUTPUT_SIZE * self.Np, self.STATE_SIZE)
@@ -463,7 +464,7 @@ class MPC_PredictionMatrices:
             F_SparseAvailable[i * self.OUTPUT_SIZE:(i + 1) *
                               self.OUTPUT_SIZE, :] = F_SA
 
-        F_SparseAvailable = self.create_sparse_available(F_SparseAvailable)
+        F_SparseAvailable = create_sparse_available(F_SparseAvailable)
 
         return F_expression, F_SparseAvailable
 
@@ -519,7 +520,7 @@ class MPC_PredictionMatrices:
                 Phi_SparseAvailable[r0:r0 + self.OUTPUT_SIZE,
                                     c0:c0 + self.INPUT_SIZE] = blok_SA
 
-        Phi_SparseAvailable = self.create_sparse_available(Phi_SparseAvailable)
+        Phi_SparseAvailable = create_sparse_available(Phi_SparseAvailable)
 
         return Phi_expression, Phi_SparseAvailable
 
