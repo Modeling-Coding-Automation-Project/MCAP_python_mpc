@@ -22,6 +22,7 @@ from mpc_utility.state_space_utility import SymbolicStateSpace
 from mpc_utility.state_space_utility import StateSpaceEmbeddedIntegrator
 from mpc_utility.state_space_utility import MPC_PredictionMatrices
 from mpc_utility.state_space_utility import MPC_ReferenceTrajectory
+from mpc_utility.state_space_utility import create_sparse_available
 
 from mpc_utility.linear_solver_utility import LMPC_QP_Solver
 from mpc_utility.state_space_utility_deploy import Adaptive_MPC_StateSpaceInitializer
@@ -174,8 +175,14 @@ class AdaptiveMPC_NoConstraints:
         self.solver_factor = np.zeros(
             (self.AUGMENTED_INPUT_SIZE * self.Nc,
              self.AUGMENTED_OUTPUT_SIZE * self.Np))
+        self.solver_factor_SparseAvailable = sp.zeros(
+            self.AUGMENTED_INPUT_SIZE * self.Nc,
+            self.AUGMENTED_OUTPUT_SIZE * self.Np)
+
         self.update_solver_factor(
             self.prediction_matrices.Phi_ndarray, self.Weight_U_Nc)
+        self.update_solver_factor_SparseAvailable(
+            self.prediction_matrices.Phi_SparseAvailable)
 
         self.Y_store = DelayedVectorObject(self.AUGMENTED_OUTPUT_SIZE,
                                            self.Number_of_Delay)
@@ -433,6 +440,11 @@ class AdaptiveMPC_NoConstraints:
         prediction_matrices.Phi_F_updater_function = \
             self.state_space_initializer.Adaptive_MPC_Phi_F_updater_function
 
+        prediction_matrices.create_build_SparseAvailable(
+            self.augmented_ss.A,
+            self.augmented_ss.B,
+            self.augmented_ss.C)
+
         prediction_matrices.update_Phi_F_adaptive_runtime(
             parameters_struct=self.kalman_filter.Parameters,
             X_ndarray=self.X_inner_model,
@@ -519,6 +531,40 @@ class AdaptiveMPC_NoConstraints:
             solver_factor = np.linalg.solve(Phi.T @ Phi + Weight_U_Nc, Phi.T)
 
         self.solver_factor = solver_factor
+
+    def update_solver_factor_SparseAvailable(
+            self,
+            Phi_SparseAvailable: sp.SparseMatrix):
+        """
+        Updates the solver factor for a sparse matrix representation.
+
+        This function computes an intermediate matrix by multiplying the inverse of the product
+        of the transpose of the input sparse matrix and itself with the transpose of the input matrix.
+        It then creates and returns a solver factor using this intermediate result.
+
+        Args:
+            Phi_SparseAvailable (sp.SparseMatrix): The input sparse matrix
+            for which the solver factor is to be updated.
+
+        Returns:
+            solver_factor_SparseAvailable: The updated solver factor
+            based on the input sparse matrix.
+
+        Note:
+            - The function assumes the existence of `create_sparse_available`
+            and that `sp` provides the necessary sparse matrix operations.
+            - The implementation currently uses a placeholder for the inverse
+            calculation (`sp.ones`),
+                which may need to be replaced with the actual inverse computation.
+        """
+
+        Phi_T_Phi_inv = sp.ones(
+            Phi_SparseAvailable.shape[1], Phi_SparseAvailable.shape[1])
+
+        solver_factor_SparseAvailable = create_sparse_available(
+            Phi_T_Phi_inv * Phi_SparseAvailable.T)
+
+        self.solver_factor_SparseAvailable = solver_factor_SparseAvailable
 
     def solve(self, reference_trajectory: MPC_ReferenceTrajectory,
               X_augmented: np.ndarray):
