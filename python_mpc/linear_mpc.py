@@ -23,8 +23,11 @@ from mpc_utility.state_space_utility import MPC_ReferenceTrajectory
 from mpc_utility.state_space_utility_deploy import LTV_MPC_StateSpaceInitializer
 from mpc_utility.linear_solver_utility import LMPC_QP_Solver
 from mpc_utility.linear_solver_utility import symbolic_to_numeric_matrix
+from mpc_utility.linear_solver_utility import create_sparse_available
 from external_libraries.MCAP_python_control.python_control.kalman_filter import LinearKalmanFilter
 from external_libraries.MCAP_python_control.python_control.kalman_filter import DelayedVectorObject
+
+USE_QR_DECOMPOSITION_FOR_SOLVER_FACTOR = True
 
 # Common Functions
 
@@ -78,18 +81,53 @@ def update_solver_factor(Phi: np.ndarray, Weight_U_Nc: np.ndarray):
     if (Phi.shape[1] != Weight_U_Nc.shape[0]) or (Phi.shape[1] != Weight_U_Nc.shape[1]):
         raise ValueError("Weight must have compatible dimensions.")
 
-    # solver_factor = np.linalg.solve(Phi.T @ Phi + Weight_U_Nc, Phi.T)
+    if USE_QR_DECOMPOSITION_FOR_SOLVER_FACTOR:
+        # solve with QR decomposition for better numerical stability
+        A_augmented = np.vstack((Phi, np.sqrt(Weight_U_Nc)))
+        Y_augmented = np.vstack(
+            (np.eye(Phi.shape[0]), np.zeros((Phi.shape[1], Phi.shape[0]))))
 
-    # solve with QR decomposition for better numerical stability
-    A_augmented = np.vstack((Phi, np.sqrt(Weight_U_Nc)))
-    Y_augmented = np.vstack(
-        (np.eye(Phi.shape[0]), np.zeros((Phi.shape[1], Phi.shape[0]))))
+        Q, R = np.linalg.qr(A_augmented)
 
-    Q, R = np.linalg.qr(A_augmented)
-
-    solver_factor = np.linalg.solve(R, Q.T @ Y_augmented)
+        solver_factor = np.linalg.solve(R, Q.T @ Y_augmented)
+    else:
+        solver_factor = np.linalg.solve(Phi.T @ Phi + Weight_U_Nc, Phi.T)
 
     return solver_factor
+
+
+def update_solver_factor_SparseAvailable(
+        Phi_SparseAvailable: sp.SparseMatrix):
+    """
+    Updates the solver factor for a sparse matrix representation.
+
+    This function computes an intermediate matrix by multiplying the inverse of the product
+    of the transpose of the input sparse matrix and itself with the transpose of the input matrix.
+    It then creates and returns a solver factor using this intermediate result.
+
+    Args:
+        Phi_SparseAvailable (sp.SparseMatrix): The input sparse matrix
+          for which the solver factor is to be updated.
+
+    Returns:
+        solver_factor_SparseAvailable: The updated solver factor
+          based on the input sparse matrix.
+
+    Note:
+        - The function assumes the existence of `create_sparse_available`
+          and that `sp` provides the necessary sparse matrix operations.
+        - The implementation currently uses a placeholder for the inverse
+          calculation (`sp.ones`),
+            which may need to be replaced with the actual inverse computation.
+    """
+
+    Phi_T_Phi_inv = sp.ones(
+        Phi_SparseAvailable.shape[1], Phi_SparseAvailable.shape[1])
+
+    solver_factor_SparseAvailable = create_sparse_available(
+        Phi_T_Phi_inv * Phi_SparseAvailable.T)
+
+    return solver_factor_SparseAvailable
 
 
 def solve_LMPC_No_Constraints(solver_factor: np.ndarray, F_ndarray: np.ndarray,
@@ -226,13 +264,21 @@ class LTI_MPC_NoConstraints:
 
         self.Weight_U_Nc = self.update_weight(Weight_U)
 
-        self.prediction_matrices = self.create_prediction_matrices(Weight_Y)
+        self.prediction_matrices: MPC_PredictionMatrices \
+            = self.create_prediction_matrices(
+                Weight_Y)
 
         self.solver_factor = np.zeros(
             (self.AUGMENTED_INPUT_SIZE * self.Nc,
              self.AUGMENTED_OUTPUT_SIZE * self.Np))
+        self.solver_factor_SparseAvailable = sp.zeros(
+            self.AUGMENTED_INPUT_SIZE * self.Nc,
+            self.AUGMENTED_OUTPUT_SIZE * self.Np)
+
         self.update_solver_factor(
             self.prediction_matrices.Phi_ndarray, self.Weight_U_Nc)
+        self.update_solver_factor_SparseAvailable(
+            self.prediction_matrices.Phi_SparseAvailable)
 
         self.Y_store = DelayedVectorObject(self.AUGMENTED_OUTPUT_SIZE,
                                            self.Number_of_Delay)
@@ -308,6 +354,12 @@ class LTI_MPC_NoConstraints:
     def update_solver_factor(self, Phi: np.ndarray, Weight_U_Nc: np.ndarray):
         self.solver_factor = update_solver_factor(
             Phi, Weight_U_Nc)
+
+    def update_solver_factor_SparseAvailable(
+            self,
+            Phi_SparseAvailable: sp.Matrix):
+        self.solver_factor_SparseAvailable = update_solver_factor_SparseAvailable(
+            Phi_SparseAvailable)
 
     def solve(self, reference_trajectory: MPC_ReferenceTrajectory,
               X_augmented: np.ndarray):
@@ -521,8 +573,14 @@ class LTV_MPC_NoConstraints:
         self.solver_factor = np.zeros(
             (self.AUGMENTED_INPUT_SIZE * self.Nc,
              self.AUGMENTED_OUTPUT_SIZE * self.Np))
+        self.solver_factor_SparseAvailable = sp.zeros(
+            self.AUGMENTED_INPUT_SIZE * self.Nc,
+            self.AUGMENTED_OUTPUT_SIZE * self.Np)
+
         self.update_solver_factor(
             self.prediction_matrices.Phi_ndarray, self.Weight_U_Nc)
+        self.update_solver_factor_SparseAvailable(
+            self.prediction_matrices.Phi_SparseAvailable)
 
         self.Y_store = DelayedVectorObject(self.AUGMENTED_OUTPUT_SIZE,
                                            self.Number_of_Delay)
@@ -612,6 +670,11 @@ class LTV_MPC_NoConstraints:
         prediction_matrices.Phi_F_updater_function = \
             self.state_space_initializer.LTV_MPC_Phi_F_updater_function
 
+        prediction_matrices.create_build_SparseAvailable(
+            self.augmented_ss.A,
+            self.augmented_ss.B,
+            self.augmented_ss.C)
+
         prediction_matrices.update_Phi_F_runtime(
             parameters_struct=self.parameters_struct)
 
@@ -624,6 +687,12 @@ class LTV_MPC_NoConstraints:
     def update_solver_factor(self, Phi: np.ndarray, Weight_U_Nc: np.ndarray):
         self.solver_factor = update_solver_factor(
             Phi, Weight_U_Nc)
+
+    def update_solver_factor_SparseAvailable(
+            self,
+            Phi_SparseAvailable: sp.Matrix):
+        self.solver_factor_SparseAvailable = update_solver_factor_SparseAvailable(
+            Phi_SparseAvailable)
 
     def solve(self, reference_trajectory: MPC_ReferenceTrajectory,
               X_augmented: np.ndarray):
