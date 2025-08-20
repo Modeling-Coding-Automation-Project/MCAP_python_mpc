@@ -705,3 +705,88 @@ class AdaptiveMPC_NoConstraints:
         self.X_inner_model = X_compensated
 
         return self.U_latest
+
+
+class AdaptiveMPC(AdaptiveMPC_NoConstraints):
+    """
+    Adaptive Model Predictive Control (MPC) with constraints.
+
+    This class extends `AdaptiveMPC_NoConstraints` to include constraints on the
+    control input, input increment, and output using a quadratic programming (QP)
+    solver. The QP solver interface and usage mirror the implementation in
+    `linear_mpc.py`.
+    """
+
+    def __init__(self,
+                 delta_time: float,
+                 X: sp.Matrix, U: sp.Matrix, Y: sp.Matrix,
+                 X_initial: np.ndarray,
+                 fxu: sp.Matrix, fxu_jacobian_X: sp.Matrix,
+                 fxu_jacobian_U: sp.Matrix,
+                 hx: sp.Matrix, hx_jacobian: sp.Matrix,
+                 parameters_struct,
+                 Np: int, Nc: int,
+                 Weight_U: np.ndarray, Weight_Y: np.ndarray,
+                 Q_kf: np.ndarray = None, R_kf: np.ndarray = None,
+                 Number_of_Delay: int = 0,
+                 is_ref_trajectory: bool = False,
+                 caller_file_name: str = None,
+                 delta_U_min: np.ndarray = None, delta_U_max: np.ndarray = None,
+                 U_min: np.ndarray = None, U_max: np.ndarray = None,
+                 Y_min: np.ndarray = None, Y_max: np.ndarray = None):
+
+        super().__init__(delta_time=delta_time,
+                         X=X, U=U, Y=Y,
+                         X_initial=X_initial,
+                         fxu=fxu, fxu_jacobian_X=fxu_jacobian_X,
+                         fxu_jacobian_U=fxu_jacobian_U,
+                         hx=hx, hx_jacobian=hx_jacobian,
+                         parameters_struct=parameters_struct,
+                         Np=Np, Nc=Nc,
+                         Weight_U=Weight_U, Weight_Y=Weight_Y,
+                         Q_kf=Q_kf, R_kf=R_kf,
+                         Number_of_Delay=Number_of_Delay,
+                         is_ref_trajectory=is_ref_trajectory,
+                         caller_file_name=caller_file_name)
+
+        delta_U_Nc = np.zeros((self.AUGMENTED_INPUT_SIZE * self.Nc, 1))
+
+        self.qp_solver = LMPC_QP_Solver(
+            number_of_variables=self.AUGMENTED_INPUT_SIZE * self.Nc,
+            output_size=self.AUGMENTED_OUTPUT_SIZE,
+            U=self.U_latest,
+            X_augmented=np.vstack((self.X_inner_model, self.Y_store.get())),
+            Phi=self.prediction_matrices.Phi_ndarray,
+            F=self.prediction_matrices.F_ndarray,
+            Weight_U_Nc=self.Weight_U_Nc,
+            delta_U_Nc=delta_U_Nc,
+            delta_U_min=delta_U_min, delta_U_max=delta_U_max,
+            U_min=U_min, U_max=U_max,
+            Y_min=Y_min, Y_max=Y_max)
+
+    def solve(self, reference_trajectory: MPC_ReferenceTrajectory,
+              X_augmented: np.ndarray):
+        """
+        Solves the constrained MPC optimization using the QP solver.
+
+        Args:
+            reference_trajectory (MPC_ReferenceTrajectory): The target trajectory.
+            X_augmented (np.ndarray): The augmented state vector used with F.
+
+        Returns:
+            np.ndarray: The optimal control increments (delta_U).
+        """
+
+        self.qp_solver.update_constraints(
+            U=self.U_latest,
+            X_augmented=X_augmented,
+            Phi=self.prediction_matrices.Phi_ndarray,
+            F=self.prediction_matrices.F_ndarray)
+
+        delta_U = self.qp_solver.solve(
+            Phi=self.prediction_matrices.Phi_ndarray,
+            F=self.prediction_matrices.F_ndarray,
+            reference_trajectory=reference_trajectory,
+            X_augmented=X_augmented)
+
+        return delta_U
