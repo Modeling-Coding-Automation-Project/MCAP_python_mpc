@@ -422,7 +422,7 @@ class LTI_MPC(LTI_MPC_NoConstraints):
         super().__init__(state_space, Np, Nc, Weight_U, Weight_Y,
                          Q_kf, R_kf, is_ref_trajectory)
 
-        delta_U_Nc = np.zeros((self.solver_factor.shape[0], 1))
+        delta_U_Nc = np.zeros((self.AUGMENTED_INPUT_SIZE * self.Nc, 1))
 
         self.qp_solver = LMPC_QP_Solver(
             number_of_variables=self.AUGMENTED_INPUT_SIZE * self.Nc,

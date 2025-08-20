@@ -750,7 +750,6 @@ class AdaptiveMPC(AdaptiveMPC_NoConstraints):
                          is_ref_trajectory=is_ref_trajectory,
                          caller_file_name=caller_file_name)
 
-        # Initialize QP solver (same interface as in linear_mpc.LTI_MPC)
         delta_U_Nc = np.zeros((self.AUGMENTED_INPUT_SIZE * self.Nc, 1))
 
         self.qp_solver = LMPC_QP_Solver(
