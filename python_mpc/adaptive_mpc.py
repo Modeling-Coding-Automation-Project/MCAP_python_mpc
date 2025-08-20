@@ -735,6 +735,22 @@ class AdaptiveMPC(AdaptiveMPC_NoConstraints):
                  U_min: np.ndarray = None, U_max: np.ndarray = None,
                  Y_min: np.ndarray = None, Y_max: np.ndarray = None):
 
+        # inspect arguments
+        # Get the caller's frame
+        frame = inspect.currentframe().f_back
+        # Get the caller's local variables
+        caller_locals = frame.f_locals
+        # Find the variable name that matches the matrix_in value
+        variable_name = None
+        for name, value in caller_locals.items():
+            if value is X:
+                variable_name = name
+                break
+        # Get the caller's file name
+        if caller_file_name is None:
+            caller_file_full_path = frame.f_code.co_filename
+            caller_file_name = os.path.basename(caller_file_full_path)
+
         super().__init__(delta_time=delta_time,
                          X=X, U=U, Y=Y,
                          X_initial=X_initial,
