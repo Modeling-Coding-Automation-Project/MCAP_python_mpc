@@ -735,7 +735,6 @@ class AdaptiveMPC(AdaptiveMPC_NoConstraints):
                  U_min: np.ndarray = None, U_max: np.ndarray = None,
                  Y_min: np.ndarray = None, Y_max: np.ndarray = None):
 
-        # Initialize base (no-constraints) adaptive MPC
         super().__init__(delta_time=delta_time,
                          X=X, U=U, Y=Y,
                          X_initial=X_initial,
@@ -778,14 +777,12 @@ class AdaptiveMPC(AdaptiveMPC_NoConstraints):
             np.ndarray: The optimal control increments (delta_U).
         """
 
-        # Update constraints with latest values and matrices
         self.qp_solver.update_constraints(
             U=self.U_latest,
             X_augmented=X_augmented,
             Phi=self.prediction_matrices.Phi_ndarray,
             F=self.prediction_matrices.F_ndarray)
 
-        # Solve QP for constrained delta_U
         delta_U = self.qp_solver.solve(
             Phi=self.prediction_matrices.Phi_ndarray,
             F=self.prediction_matrices.F_ndarray,
