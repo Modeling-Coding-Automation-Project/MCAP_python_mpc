@@ -174,14 +174,14 @@ def main():
 
     Number_of_Delay = 0
 
-    delta_limit = 1000.0
-    acc_limit = 1000.0
+    delta_limit = 1.0  # [rad]
+    acc_limit = 10.0  # [m/s^2]
     U_min = np.array([
-        [-delta_limit * np.pi / 180],
+        [-delta_limit],
         [-acc_limit]
     ])
     U_max = np.array([
-        [delta_limit * np.pi / 180],
+        [delta_limit],
         [acc_limit]
     ])
 
