@@ -176,33 +176,10 @@ def calculate_this_U(AUGMENTED_INPUT_SIZE: int, U: np.ndarray, delta_U: np.ndarr
 def compensate_X_Y_delay(kalman_filter: LinearKalmanFilter,
                          Number_of_Delay: int,
                          Y_store: DelayedVectorObject,
-                         X: np.ndarray, Y: np.ndarray):
-    """
-    Compensates for output delay in a control system using a Kalman filter and a delayed output buffer.
+                         X_in: np.ndarray, Y_in: np.ndarray):
 
-    Parameters:
-        kalman_filter: An object implementing Kalman filter methods, expected to have
-            - get_x_hat_without_delay(): Returns the estimated state vector without delay.
-            - C: The output matrix used to compute the estimated output.
-        Number_of_Delay (int): The number of time steps of output delay to compensate for.
-        Y_store (DelayedVectorObject): An object that stores delayed output vectors, expected to have
-            - push(value): Stores a new output vector.
-            - get(): Retrieves the output vector from the delayed buffer.
-        X (np.ndarray): The current state estimate vector.
-        Y (np.ndarray): The current measured output vector.
-
-    Returns:
-        Tuple[np.ndarray, np.ndarray]:
-            - The compensated state estimate vector.
-            - The compensated output vector, adjusted for the specified delay.
-
-    Notes:
-        - If Number_of_Delay is zero or less, the function returns the original X and Y.
-        - If Number_of_Delay is greater than zero, the function compensates for the delay
-        by adjusting the output using the delayed buffer and the Kalman filter estimate.
-    """
     if Number_of_Delay > 0:
-        Y_measured = Y
+        Y_measured = Y_in
 
         X = kalman_filter.get_x_hat_without_delay()
         Y = kalman_filter.C @ X
@@ -212,7 +189,7 @@ def compensate_X_Y_delay(kalman_filter: LinearKalmanFilter,
 
         return X, (Y + Y_diff)
     else:
-        return X, Y
+        return X_in, Y_in
 
 
 class LTI_MPC_NoConstraints:
@@ -706,8 +683,11 @@ class LTV_MPC_NoConstraints:
 
     def compensate_X_Y_delay(self, X: np.ndarray, Y: np.ndarray):
         return compensate_X_Y_delay(
-            self.kalman_filter, self.Number_of_Delay,
-            self.Y_store, X, Y)
+            kalman_filter=self.kalman_filter,
+            Number_of_Delay=self.Number_of_Delay,
+            Y_store=self.Y_store,
+            X_in=X,
+            Y_in=Y)
 
     def update_parameters(self, parameters_struct):
         """
