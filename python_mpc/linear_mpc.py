@@ -177,7 +177,22 @@ def compensate_X_Y_delay(kalman_filter: LinearKalmanFilter,
                          Number_of_Delay: int,
                          Y_store: DelayedVectorObject,
                          X_in: np.ndarray, Y_in: np.ndarray):
+    """
+    Compensates for measurement delay in X and Y signals
+      using a Kalman filter and a delayed vector store.
 
+    Args:
+        kalman_filter (LinearKalmanFilter): The Kalman filter object used to estimate the state.
+        Number_of_Delay (int): The number of delay steps to compensate for.
+        Y_store (DelayedVectorObject): An object that stores delayed Y vectors for compensation.
+        X_in (np.ndarray): The input state vector without delay compensation.
+        Y_in (np.ndarray): The input output vector without delay compensation.
+
+    Returns:
+        Tuple[np.ndarray, np.ndarray]:
+            - The compensated state vector (X).
+            - The compensated output vector (Y).
+    """
     if Number_of_Delay > 0:
         Y_measured = Y_in
 
