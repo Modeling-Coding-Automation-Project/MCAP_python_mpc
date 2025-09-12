@@ -261,7 +261,8 @@ class AdaptiveMPC_NoConstraints:
             measurement_function_jacobian=hx_jacobian_script_function,
             Q=Q_kf,
             R=R_kf,
-            Parameters=parameters_struct
+            Parameters=parameters_struct,
+            Number_of_Delay=self.Number_of_Delay
         )
         kalman_filter.x_hat = self.X_inner_model
 
@@ -629,7 +630,8 @@ class AdaptiveMPC_NoConstraints:
             Y_measured = Y
 
             X = self.kalman_filter.get_x_hat_without_delay()
-            Y = self.kalman_filter.C @ X
+            Y = self.kalman_filter.measurement_function(
+                X, self.kalman_filter.Parameters)
 
             self.Y_store.push(Y)
             Y_diff = Y_measured - self.Y_store.get()
