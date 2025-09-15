@@ -10,8 +10,9 @@ from dataclasses import is_dataclass
 
 from external_libraries.MCAP_python_control.python_control.kalman_filter import ExtendedKalmanFilter
 from external_libraries.MCAP_python_control.python_control.kalman_filter import DelayedVectorObject
-
 from external_libraries.MCAP_python_control.python_control.control_deploy import ExpressionDeploy
+
+from external_libraries.MCAP_python_optimization.optimization_utility.sqp_matrix_utility import SQP_CostMatrices_NMPC
 
 
 class NonlinearMPC_TwiceDifferentiable:
@@ -25,8 +26,15 @@ class NonlinearMPC_TwiceDifferentiable:
         hx: sp.Matrix,
         parameters_struct,
         Np: int,
-        Weight_U: np.ndarray, Weight_Y: np.ndarray,
-        Q_kf: np.ndarray = None, R_kf: np.ndarray = None,
+        Weight_U: np.ndarray,
+        Weight_X: np.ndarray,
+        Weight_Y: np.ndarray,
+        U_min: np.ndarray = None,
+        U_max: np.ndarray = None,
+        Y_min: np.ndarray = None,
+        Y_max: np.ndarray = None,
+        Q_kf: np.ndarray = None,
+        R_kf: np.ndarray = None,
         Number_of_Delay: int = 0,
         is_ref_trajectory: bool = False,
         caller_file_name: str = None
@@ -59,6 +67,8 @@ class NonlinearMPC_TwiceDifferentiable:
             raise ValueError(
                 "parameters_struct must be a dataclass instance.")
 
+        self.Np = Np
+
         self.X_symbolic = X
         self.U_symbolic = U
         self.fxu = fxu
@@ -67,6 +77,19 @@ class NonlinearMPC_TwiceDifferentiable:
         # initialize state
         self.X_inner_model = X_initial
 
+        self.sqp_cost_matrices = self.generate_cost_matrices(
+            X_symbolic=X,
+            U_symbolic=U,
+            fxu=fxu,
+            hx=hx,
+            Np=Np,
+            Weight_U=Weight_U,
+            Weight_X=Weight_X,
+            Weight_Y=Weight_Y,
+            U_min=U_min,
+            U_max=U_max
+        )
+
         # create EKF object
         self.kalman_filter, \
             (self.fxu_script_function, self.fxu_file_name), \
@@ -74,14 +97,46 @@ class NonlinearMPC_TwiceDifferentiable:
             = self.initialize_kalman_filter(
                 X=X, U=U,
                 fxu=fxu,
-                fxu_jacobian_X=fxu_jacobian_X,
+                fxu_jacobian_X=self.sqp_cost_matrices.A_matrix,
                 hx=hx,
-                hx_jacobian=hx_jacobian,
+                hx_jacobian=self.sqp_cost_matrices.C_matrix,
                 Q_kf=Q_kf,
                 R_kf=R_kf,
                 parameters_struct=parameters_struct,
                 file_name_without_ext=caller_file_name_without_ext
             )
+
+    def generate_cost_matrices(
+            self,
+            X_symbolic: sp.Matrix,
+            U_symbolic: sp.Matrix,
+            fxu: sp.Matrix,
+            hx: sp.Matrix,
+            Np: int,
+            Weight_U: np.ndarray,
+            Weight_X: np.ndarray,
+            Weight_Y: np.ndarray,
+            U_min: np.ndarray,
+            U_max: np.ndarray
+    ):
+        Qx = np.diag(Weight_X)
+        Qy = np.diag(Weight_Y)
+        R = np.diag(Weight_U)
+
+        sqp_cost_matrices = SQP_CostMatrices_NMPC(
+            x_syms=X_symbolic,
+            u_syms=U_symbolic,
+            state_equation_vector=fxu,
+            measurement_equation_vector=hx,
+            Np=Np,
+            Qx=Qx,
+            Qy=Qy,
+            R=R,
+            U_min=U_min,
+            U_max=U_max,
+        )
+
+        return sqp_cost_matrices
 
     def initialize_kalman_filter(
         self,
