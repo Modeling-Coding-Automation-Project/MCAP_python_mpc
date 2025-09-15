@@ -1,4 +1,5 @@
-""" File: adaptive_mpc.py
+"""
+File: adaptive_mpc.py
 
 This module implements Adaptive Model Predictive Control (MPC)
 algorithms for nonlinear systems using symbolic state-space models.
@@ -12,11 +13,14 @@ embedded integrator support, and flexible weighting for control
 and output objectives.
 """
 import os
+import sys
+sys.path.append(os.path.join(
+    os.getcwd(), 'external_libraries', 'MCAP_python_optimization'))
+
 import inspect
 import numpy as np
 import sympy as sp
-import control
-from dataclasses import is_dataclass, fields, make_dataclass
+from dataclasses import is_dataclass
 
 from mpc_utility.state_space_utility import SymbolicStateSpace
 from mpc_utility.state_space_utility import StateSpaceEmbeddedIntegrator
@@ -62,14 +66,6 @@ class AdaptiveMPC_NoConstraints:
         # inspect arguments
         # Get the caller's frame
         frame = inspect.currentframe().f_back
-        # Get the caller's local variables
-        caller_locals = frame.f_locals
-        # Find the variable name that matches the matrix_in value
-        variable_name = None
-        for name, value in caller_locals.items():
-            if value is X:
-                variable_name = name
-                break
         # Get the caller's file name
         if caller_file_name is None:
             caller_file_full_path = frame.f_code.co_filename
