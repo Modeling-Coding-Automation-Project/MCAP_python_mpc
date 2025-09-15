@@ -17,6 +17,8 @@ from external_libraries.MCAP_python_control.python_control.control_deploy import
 from external_libraries.MCAP_python_optimization.optimization_utility.sqp_matrix_utility import SQP_CostMatrices_NMPC
 from external_libraries.MCAP_python_optimization.python_optimization.sqp_active_set_pcg_pls import SQP_ActiveSet_PCG_PLS
 
+NMPC_SOLVER_MAX_ITERATION_DEFAULT = 20
+
 
 class NonlinearMPC_TwiceDifferentiable:
     def __init__(
@@ -94,7 +96,9 @@ class NonlinearMPC_TwiceDifferentiable:
             Weight_X=Weight_X,
             Weight_Y=Weight_Y,
             U_min=U_min,
-            U_max=U_max
+            U_max=U_max,
+            Y_min=Y_min,
+            Y_max=Y_max,
         )
 
         self.sqp_cost_matrices.state_space_parameters = parameters_struct
@@ -120,6 +124,8 @@ class NonlinearMPC_TwiceDifferentiable:
             U_size=(self.INPUT_SIZE, self.Np)
         )
 
+        self.solver.set_solver_max_iteration(NMPC_SOLVER_MAX_ITERATION_DEFAULT)
+
     def generate_cost_matrices(
             self,
             X_symbolic: sp.Matrix,
@@ -131,7 +137,9 @@ class NonlinearMPC_TwiceDifferentiable:
             Weight_X: np.ndarray,
             Weight_Y: np.ndarray,
             U_min: np.ndarray,
-            U_max: np.ndarray
+            U_max: np.ndarray,
+            Y_min: np.ndarray,
+            Y_max: np.ndarray,
     ):
         Qx = np.diag(Weight_X)
         Qy = np.diag(Weight_Y)
@@ -148,6 +156,14 @@ class NonlinearMPC_TwiceDifferentiable:
             R=R,
             U_min=U_min,
             U_max=U_max,
+            Y_min=Y_min,
+            Y_max=Y_max,
         )
 
         return sqp_cost_matrices
+
+    def set_solver_max_iteration(
+            self,
+            max_iteration: int
+    ):
+        self.solver.set_solver_max_iteration(max_iteration)
