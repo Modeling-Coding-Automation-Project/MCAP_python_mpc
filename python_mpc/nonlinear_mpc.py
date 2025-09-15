@@ -15,6 +15,7 @@ from external_libraries.MCAP_python_control.python_control.kalman_filter import 
 from external_libraries.MCAP_python_control.python_control.control_deploy import ExpressionDeploy
 
 from external_libraries.MCAP_python_optimization.optimization_utility.sqp_matrix_utility import SQP_CostMatrices_NMPC
+from external_libraries.MCAP_python_optimization.python_optimization.sqp_active_set_pcg_pls import SQP_ActiveSet_PCG_PLS
 
 
 class NonlinearMPC_TwiceDifferentiable:
@@ -76,6 +77,10 @@ class NonlinearMPC_TwiceDifferentiable:
         self.fxu = fxu
         self.hx = hx
 
+        self.INPUT_SIZE = U.shape[0]
+        self.STATE_SIZE = X.shape[0]
+        self.OUTPUT_SIZE = hx.shape[0]
+
         # initialize state
         self.X_inner_model = X_initial
 
@@ -92,11 +97,12 @@ class NonlinearMPC_TwiceDifferentiable:
             U_max=U_max
         )
 
-        # create EKF object
+        self.sqp_cost_matrices.state_space_parameters = parameters_struct
+
         self.kalman_filter, \
             (self.fxu_script_function, self.fxu_file_name), \
             (self.hx_script_function, self.hx_file_name) \
-            = self.initialize_kalman_filter_with_EKF(
+            = initialize_kalman_filter_with_EKF(
                 X_initial=X_initial,
                 X=X, U=U,
                 fxu=fxu,
@@ -109,6 +115,10 @@ class NonlinearMPC_TwiceDifferentiable:
                 Number_of_Delay=Number_of_Delay,
                 file_name_without_ext=caller_file_name_without_ext
             )
+
+        self.solver = SQP_ActiveSet_PCG_PLS(
+            U_size=(self.INPUT_SIZE, self.Np)
+        )
 
     def generate_cost_matrices(
             self,
