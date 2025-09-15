@@ -8,6 +8,8 @@ import numpy as np
 import sympy as sp
 from dataclasses import is_dataclass
 
+from python_mpc.mpc_common import initialize_kalman_filter_with_EKF
+
 from external_libraries.MCAP_python_control.python_control.kalman_filter import ExtendedKalmanFilter
 from external_libraries.MCAP_python_control.python_control.kalman_filter import DelayedVectorObject
 from external_libraries.MCAP_python_control.python_control.control_deploy import ExpressionDeploy
@@ -94,7 +96,8 @@ class NonlinearMPC_TwiceDifferentiable:
         self.kalman_filter, \
             (self.fxu_script_function, self.fxu_file_name), \
             (self.hx_script_function, self.hx_file_name) \
-            = self.initialize_kalman_filter(
+            = self.initialize_kalman_filter_with_EKF(
+                X_initial=X_initial,
                 X=X, U=U,
                 fxu=fxu,
                 fxu_jacobian_X=self.sqp_cost_matrices.A_matrix,
@@ -103,6 +106,7 @@ class NonlinearMPC_TwiceDifferentiable:
                 Q_kf=Q_kf,
                 R_kf=R_kf,
                 parameters_struct=parameters_struct,
+                Number_of_Delay=Number_of_Delay,
                 file_name_without_ext=caller_file_name_without_ext
             )
 
@@ -137,60 +141,3 @@ class NonlinearMPC_TwiceDifferentiable:
         )
 
         return sqp_cost_matrices
-
-    def initialize_kalman_filter(
-        self,
-        X: sp.Matrix,
-        U: sp.Matrix,
-        fxu: sp.Matrix,
-        fxu_jacobian_X: sp.Matrix,
-        hx: sp.Matrix,
-        hx_jacobian: sp.Matrix,
-        Q_kf: np.ndarray,
-        R_kf: np.ndarray,
-        parameters_struct,
-        file_name_without_ext: str
-    ):
-        fxu_file_name = ExpressionDeploy.write_state_function_code_from_sympy(
-            fxu, X, U, file_name_without_ext)
-        fxu_jacobian_X_file_name = \
-            ExpressionDeploy.write_state_function_code_from_sympy(
-                fxu_jacobian_X, X, U, file_name_without_ext)
-
-        hx_file_name = ExpressionDeploy.write_measurement_function_code_from_sympy(
-            hx, X, file_name_without_ext)
-        hx_jacobian_file_name = \
-            ExpressionDeploy.write_measurement_function_code_from_sympy(
-                hx_jacobian, X, file_name_without_ext)
-
-        local_vars = {}
-
-        exec(f"from {fxu_file_name} import function as fxu_script_function",
-             globals(), local_vars)
-        exec(
-            f"from {fxu_jacobian_X_file_name} import function as fxu_jacobian_script_function", globals(), local_vars)
-        exec(f"from {hx_file_name} import function as hx_script_function",
-             globals(), local_vars)
-        exec(
-            f"from {hx_jacobian_file_name} import function as hx_jacobian_script_function", globals(), local_vars)
-
-        fxu_script_function = local_vars["fxu_script_function"]
-        fxu_jacobian_script_function = local_vars["fxu_jacobian_script_function"]
-        hx_script_function = local_vars["hx_script_function"]
-        hx_jacobian_script_function = local_vars["hx_jacobian_script_function"]
-
-        kalman_filter = ExtendedKalmanFilter(
-            state_function=fxu_script_function,
-            state_function_jacobian=fxu_jacobian_script_function,
-            measurement_function=hx_script_function,
-            measurement_function_jacobian=hx_jacobian_script_function,
-            Q=Q_kf,
-            R=R_kf,
-            Parameters=parameters_struct,
-            Number_of_Delay=self.Number_of_Delay
-        )
-        kalman_filter.x_hat = self.X_inner_model
-
-        return kalman_filter, \
-            (fxu_script_function, fxu_file_name), \
-            (hx_script_function, hx_file_name)
