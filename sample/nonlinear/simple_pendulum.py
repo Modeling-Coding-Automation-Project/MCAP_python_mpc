@@ -37,6 +37,10 @@ class Parameters:
 
 
 def main():
+    # system setting
+    delta_time = 0.05
+    Number_of_Delay = 0
+
     # Create symbolic plant model
     f, h, x_syms, u_syms = create_plant_model()
 
@@ -83,7 +87,7 @@ def main():
         U_max=u_max,
         Q_kf=Q_ekf,
         R_kf=R_ekf,
-        Number_of_Delay=0
+        Number_of_Delay=Number_of_Delay,
     )
 
 
