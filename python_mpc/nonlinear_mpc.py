@@ -99,6 +99,7 @@ class NonlinearMPC_TwiceDifferentiable:
             U_max=U_max,
             Y_min=Y_min,
             Y_max=Y_max,
+            caller_file_name=caller_file_name,
         )
 
         self.sqp_cost_matrices.state_space_parameters = parameters_struct
@@ -140,6 +141,7 @@ class NonlinearMPC_TwiceDifferentiable:
             U_max: np.ndarray,
             Y_min: np.ndarray,
             Y_max: np.ndarray,
+            caller_file_name: str,
     ):
         Qx = np.diag(Weight_X)
         Qy = np.diag(Weight_Y)
@@ -158,6 +160,7 @@ class NonlinearMPC_TwiceDifferentiable:
             U_max=U_max,
             Y_min=Y_min,
             Y_max=Y_max,
+            caller_file_name=caller_file_name,
         )
 
         return sqp_cost_matrices

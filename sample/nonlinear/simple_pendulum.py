@@ -6,6 +6,8 @@ import numpy as np
 import sympy as sp
 from dataclasses import dataclass
 
+from python_mpc.nonlinear_mpc import NonlinearMPC_TwiceDifferentiable
+
 
 def create_plant_model():
     theta, omega, u0, dt, a, b, c, d = sp.symbols(
@@ -51,9 +53,38 @@ def main():
     u_min = np.array([[-2.0]])
     u_max = np.array([[2.0]])
 
+    # weights
+    Weight_U = np.diag([0.05])
+    Weight_X = np.diag([2.5, 0.5])
+    Weight_Y = np.diag([2.5])
+
+    Q_ekf = np.diag([1.0, 1.0])
+    R_ekf = np.diag([1.0])
+
     # reference
     reference = np.array([[0.0]])
-    reference_trajectory = np.tile(reference, (1, Np + 1))
+
+    # Nonlinear MPC object
+    X_initial = np.array([[np.pi / 4.0], [0.0]])
+
+    nmpc = NonlinearMPC_TwiceDifferentiable(
+        delta_time=state_space_parameters.dt,
+        X=x_syms,
+        U=u_syms,
+        X_initial=X_initial,
+        fxu=f,
+        hx=h,
+        parameters_struct=state_space_parameters,
+        Np=Np,
+        Weight_U=Weight_U,
+        Weight_X=Weight_X,
+        Weight_Y=Weight_Y,
+        U_min=u_min,
+        U_max=u_max,
+        Q_kf=Q_ekf,
+        R_kf=R_ekf,
+        Number_of_Delay=0
+    )
 
 
 if __name__ == "__main__":
