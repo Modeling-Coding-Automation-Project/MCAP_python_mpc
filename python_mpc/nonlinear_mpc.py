@@ -237,6 +237,7 @@ class NonlinearMPC_TwiceDifferentiable:
         self.kalman_filter.predict_and_update(
             self.U_latest, Y)
         X = self.kalman_filter.x_hat
+
         X_compensated, Y_offset = self.compensate_X_Y_delay(X, Y)
 
         self.set_reference_trajectory(reference)
