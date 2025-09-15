@@ -50,7 +50,7 @@ class AdaptiveMPC_NoConstraints:
 
     def __init__(self,
                  delta_time: float,
-                 X: sp.Matrix, U: sp.Matrix, Y: sp.Matrix,
+                 X: sp.Matrix, U: sp.Matrix,
                  X_initial: np.ndarray,
                  fxu: sp.Matrix, fxu_jacobian_X: sp.Matrix,
                  fxu_jacobian_U: sp.Matrix,
@@ -102,8 +102,8 @@ class AdaptiveMPC_NoConstraints:
         self.X_inner_model = X_initial
 
         self.AUGMENTED_INPUT_SIZE = U.shape[0]
-        self.AUGMENTED_STATE_SIZE = X.shape[0] + Y.shape[0]
-        self.AUGMENTED_OUTPUT_SIZE = Y.shape[0]
+        self.AUGMENTED_STATE_SIZE = X.shape[0] + hx.shape[0]
+        self.AUGMENTED_OUTPUT_SIZE = hx.shape[0]
 
         self.U_latest = np.zeros(
             (self.AUGMENTED_INPUT_SIZE, 1))
@@ -113,7 +113,7 @@ class AdaptiveMPC_NoConstraints:
             (self.fxu_script_function, self.fxu_file_name), \
             (self.hx_script_function, self.hx_file_name) \
             = self.initialize_kalman_filter(
-                X=X, U=U, Y=Y,
+                X=X, U=U,
                 fxu=fxu, fxu_jacobian_X=fxu_jacobian_X,
                 hx=hx, hx_jacobian=hx_jacobian,
                 Q_kf=Q_kf,
@@ -186,7 +186,7 @@ class AdaptiveMPC_NoConstraints:
         self.is_ref_trajectory = is_ref_trajectory
 
     def initialize_kalman_filter(self,
-                                 X: sp.Matrix, U: sp.Matrix, Y: sp.Matrix,
+                                 X: sp.Matrix, U: sp.Matrix,
                                  fxu: sp.Matrix, fxu_jacobian_X: sp.Matrix,
                                  hx: sp.Matrix, hx_jacobian: sp.Matrix,
                                  Q_kf: np.ndarray,
@@ -203,7 +203,6 @@ class AdaptiveMPC_NoConstraints:
         Args:
             X (sp.Matrix): Symbolic state vector.
             U (sp.Matrix): Symbolic input vector.
-            Y (sp.Matrix): Symbolic measurement vector.
             fxu (sp.Matrix): Symbolic state transition function f(x, u).
             fxu_jacobian_X (sp.Matrix): Jacobian of the state transition function with respect to X.
             hx (sp.Matrix): Symbolic measurement function h(x).
@@ -717,7 +716,7 @@ class AdaptiveMPC(AdaptiveMPC_NoConstraints):
 
     def __init__(self,
                  delta_time: float,
-                 X: sp.Matrix, U: sp.Matrix, Y: sp.Matrix,
+                 X: sp.Matrix, U: sp.Matrix,
                  X_initial: np.ndarray,
                  fxu: sp.Matrix, fxu_jacobian_X: sp.Matrix,
                  fxu_jacobian_U: sp.Matrix,
@@ -750,7 +749,7 @@ class AdaptiveMPC(AdaptiveMPC_NoConstraints):
             caller_file_name = os.path.basename(caller_file_full_path)
 
         super().__init__(delta_time=delta_time,
-                         X=X, U=U, Y=Y,
+                         X=X, U=U,
                          X_initial=X_initial,
                          fxu=fxu, fxu_jacobian_X=fxu_jacobian_X,
                          fxu_jacobian_U=fxu_jacobian_U,
