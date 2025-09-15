@@ -36,8 +36,10 @@ USE_QR_DECOMPOSITION_FOR_SOLVER_FACTOR = True
 # Common Functions
 
 
-def create_reference_trajectory(is_ref_trajectory: bool, Np: int,
-                                reference_trajectory: np.ndarray):
+def create_reference_trajectory(
+        is_ref_trajectory: bool, Np: int,
+        reference_trajectory: np.ndarray
+):
     """
     Creates a reference trajectory object for Model Predictive Control (MPC).
     Parameters:
@@ -281,8 +283,12 @@ class LTI_MPC_NoConstraints:
 
         self.is_ref_trajectory = is_ref_trajectory
 
-    def initialize_kalman_filter(self, state_space: SymbolicStateSpace,
-                                 Q_kf: np.ndarray, R_kf: np.ndarray) -> LinearKalmanFilter:
+    def initialize_kalman_filter(
+            self,
+            state_space: SymbolicStateSpace,
+            Q_kf: np.ndarray,
+            R_kf: np.ndarray
+    ) -> LinearKalmanFilter:
         """
         Initializes the Kalman filter for state estimation.
         Args:
@@ -575,9 +581,13 @@ class LTV_MPC_NoConstraints:
 
         self.is_ref_trajectory = is_ref_trajectory
 
-    def initialize_kalman_filter(self, state_space: SymbolicStateSpace,
-                                 parameters_struct,
-                                 Q_kf: np.ndarray, R_kf: np.ndarray) -> LinearKalmanFilter:
+    def initialize_kalman_filter(
+            self,
+            state_space: SymbolicStateSpace,
+            parameters_struct,
+            Q_kf: np.ndarray,
+            R_kf: np.ndarray
+    ) -> LinearKalmanFilter:
         """
         Initializes and returns a LinearKalmanFilter object
           using the provided symbolic state space, parameters, and noise covariances.

@@ -185,14 +185,16 @@ class AdaptiveMPC_NoConstraints:
 
         self.is_ref_trajectory = is_ref_trajectory
 
-    def initialize_kalman_filter(self,
-                                 X: sp.Matrix, U: sp.Matrix,
-                                 fxu: sp.Matrix, fxu_jacobian_X: sp.Matrix,
-                                 hx: sp.Matrix, hx_jacobian: sp.Matrix,
-                                 Q_kf: np.ndarray,
-                                 R_kf: np.ndarray,
-                                 parameters_struct,
-                                 file_name_without_ext: str):
+    def initialize_kalman_filter(
+            self,
+            X: sp.Matrix, U: sp.Matrix,
+            fxu: sp.Matrix, fxu_jacobian_X: sp.Matrix,
+            hx: sp.Matrix, hx_jacobian: sp.Matrix,
+            Q_kf: np.ndarray,
+            R_kf: np.ndarray,
+            parameters_struct,
+            file_name_without_ext: str
+    ):
         """
         Initializes an Extended Kalman Filter (EKF) using symbolic model functions and their Jacobians.
 
