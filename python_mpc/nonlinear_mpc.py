@@ -10,9 +10,7 @@ from dataclasses import is_dataclass
 
 from python_mpc.mpc_common import initialize_kalman_filter_with_EKF
 
-from external_libraries.MCAP_python_control.python_control.kalman_filter import ExtendedKalmanFilter
 from external_libraries.MCAP_python_control.python_control.kalman_filter import DelayedVectorObject
-from external_libraries.MCAP_python_control.python_control.control_deploy import ExpressionDeploy
 
 from external_libraries.MCAP_python_optimization.optimization_utility.sqp_matrix_utility import SQP_CostMatrices_NMPC
 from external_libraries.MCAP_python_optimization.python_optimization.sqp_active_set_pcg_pls import SQP_ActiveSet_PCG_PLS
@@ -127,6 +125,8 @@ class NonlinearMPC_TwiceDifferentiable:
 
         self.solver.set_solver_max_iteration(NMPC_SOLVER_MAX_ITERATION_DEFAULT)
 
+        self.is_ref_trajectory = is_ref_trajectory
+
     def generate_cost_matrices(
             self,
             X_symbolic: sp.Matrix,
@@ -170,3 +170,46 @@ class NonlinearMPC_TwiceDifferentiable:
             max_iteration: int
     ):
         self.solver.set_solver_max_iteration(max_iteration)
+
+    def set_reference_trajectory(
+            self,
+            reference_trajectory: np.ndarray
+    ):
+        if self.is_ref_trajectory:
+            if not ((reference_trajectory.shape[1] == self.Np) or
+                    (reference_trajectory.shape[1] == 1)):
+                raise ValueError(
+                    "Reference vector must be either a single row vector or a Np row vectors.")
+
+        self.sqp_cost_matrices.reference_trajectory = \
+            np.zeros((self.OUTPUT_SIZE, self.Np + 1))
+
+        if reference_trajectory.shape[1] == self.Np:
+            for i in range(self.OUTPUT_SIZE):
+                for j in range(self.Np):
+                    self.sqp_cost_matrices.reference_trajectory[i, j] = \
+                        reference_trajectory[i, j]
+
+            for i in range(self.OUTPUT_SIZE):
+                self.sqp_cost_matrices.reference_trajectory[i, self.Np] = \
+                    reference_trajectory[i, self.Np - 1]
+        else:
+            for i in range(self.OUTPUT_SIZE):
+                for j in range(self.Np + 1):
+                    self.sqp_cost_matrices.reference_trajectory[i, j] = \
+                        reference_trajectory[i, 0]
+
+    def update_parameters(self, parameters_struct):
+        if not is_dataclass(parameters_struct):
+            raise ValueError(
+                "parameters_struct must be a dataclass instance.")
+
+        self.sqp_cost_matrices.state_space_parameters = parameters_struct
+        self.kalman_filter.Parameters = parameters_struct
+
+    def update_manipulation(
+            self,
+            reference: np.ndarray,
+            Y: np.ndarray
+    ):
+        pass

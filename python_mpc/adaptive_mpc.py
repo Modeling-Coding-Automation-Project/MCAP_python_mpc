@@ -377,13 +377,13 @@ class AdaptiveMPC_NoConstraints:
             reference_trajectory: np.ndarray,
             Y: np.ndarray):
         """
-        Creates a reference trajectory for the MPC controller by computing the difference 
+        Creates a reference trajectory for the MPC controller by computing the difference
         between the provided reference trajectory and the current output Y.
 
         Parameters
         ----------
         reference_trajectory : np.ndarray
-            The desired reference trajectory, either as a single row vector or a matrix 
+            The desired reference trajectory, either as a single row vector or a matrix
             with Np row vectors.
         Y : np.ndarray
             The current output vector.
@@ -396,7 +396,7 @@ class AdaptiveMPC_NoConstraints:
         Raises
         ------
         ValueError
-            If the reference_trajectory does not have the correct shape (must be either 
+            If the reference_trajectory does not have the correct shape (must be either
             a single row vector or Np row vectors).
         """
 
