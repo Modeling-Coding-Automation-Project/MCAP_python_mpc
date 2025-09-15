@@ -1,4 +1,8 @@
 import os
+import sys
+sys.path.append(os.path.join(
+    os.getcwd(), 'external_libraries', 'MCAP_python_optimization'))
+
 import inspect
 import numpy as np
 import sympy as sp
