@@ -72,7 +72,6 @@ def create_model(delta_time: float):
 
     theta, px, py = sp.symbols('theta px py', real=True)
     X = sp.Matrix([[px], [py], [theta], [r], [beta], [V]])
-    Y = sp.Matrix([[px], [py], [theta], [r], [V]])
 
     fxu_continuous = sp.Matrix([
         [V * sp.cos(theta)],
@@ -96,7 +95,7 @@ def create_model(delta_time: float):
     fxu_jacobian_U = fxu.jacobian(U)
     hx_jacobian = hx.jacobian(X)
 
-    return X, U, Y, \
+    return X, U, \
         fxu, fxu_jacobian_X, fxu_jacobian_U, \
         hx, hx_jacobian
 
@@ -167,7 +166,7 @@ def main():
 
     time = np.arange(0, simulation_time, sim_delta_time)
 
-    X, U, Y, \
+    X, U, \
         fxu, fxu_jacobian_X, fxu_jacobian_U, \
         hx, hx_jacobian = create_model(sim_delta_time)
 
@@ -188,7 +187,7 @@ def main():
 
     ada_mpc = AdaptiveMPC_NoConstraints(
         delta_time=sim_delta_time,
-        X=X, U=U, Y=Y,
+        X=X, U=U,
         X_initial=X_initial,
         fxu=fxu, fxu_jacobian_X=fxu_jacobian_X,
         fxu_jacobian_U=fxu_jacobian_U,
