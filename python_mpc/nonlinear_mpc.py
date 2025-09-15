@@ -206,27 +206,6 @@ class NonlinearMPC_TwiceDifferentiable:
         return U_horizon[:, 0].reshape((self.INPUT_SIZE, 1))
 
     def compensate_X_Y_delay(self, X: np.ndarray, Y: np.ndarray):
-        """
-        Compensates for delay in the X and Y signals using a Kalman filter and stored Y values.
-        Parameters
-        ----------
-        X : np.ndarray
-            The current state estimate.
-        Y : np.ndarray
-            The current output measurement.
-        Returns
-        -------
-        X : np.ndarray
-            The compensated state estimate.
-        Y : np.ndarray
-            The compensated output measurement, adjusted for delay if applicable.
-        Notes
-        -----
-        If `Number_of_Delay` is greater than zero, the function uses the Kalman filter to estimate
-        the state and output without delay, stores the output, and compensates for the delay by
-        adding the difference between the measured and stored output. Otherwise, it simply stores
-        the output and returns the original state and output.
-        """
 
         if self.Number_of_Delay > 0:
             Y_measured = Y
@@ -236,11 +215,11 @@ class NonlinearMPC_TwiceDifferentiable:
                 X, self.kalman_filter.Parameters)
 
             self.Y_store.push(Y)
-            Y_diff = Y_measured - self.Y_store.get()
+            Y_offset = Y_measured - self.Y_store.get()
 
-            return X, (Y + Y_diff)
+            return X, Y_offset
         else:
-            return X, Y
+            return X, np.zeros((self.OUTPUT_SIZE, 1))
 
     def update_parameters(self, parameters_struct):
         if not is_dataclass(parameters_struct):
@@ -258,7 +237,7 @@ class NonlinearMPC_TwiceDifferentiable:
         self.kalman_filter.predict_and_update(
             self.U_latest, Y)
         X = self.kalman_filter.x_hat
-        X_compensated, Y_compensated = self.compensate_X_Y_delay(X, Y)
+        X_compensated, Y_offset = self.compensate_X_Y_delay(X, Y)
 
         self.set_reference_trajectory(reference)
 
@@ -267,7 +246,7 @@ class NonlinearMPC_TwiceDifferentiable:
             cost_and_gradient_function=self.sqp_cost_matrices.compute_cost_and_gradient,
             hvp_function=self.sqp_cost_matrices.hvp_analytic,
             X_initial=X_compensated,
-            Y_initial=Y_compensated,
+            Y_offset=Y_offset,
             U_min_matrix=self.sqp_cost_matrices.U_min_matrix,
             U_max_matrix=self.sqp_cost_matrices.U_max_matrix,
         )
