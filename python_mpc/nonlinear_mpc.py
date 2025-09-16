@@ -215,11 +215,13 @@ class NonlinearMPC_TwiceDifferentiable:
                 X, self.kalman_filter.Parameters)
 
             self.Y_store.push(Y)
-            Y_offset = Y_measured - self.Y_store.get()
 
-            return X, Y_offset
+            self.sqp_cost_matrices.set_Y_offset(
+                Y_measured - self.Y_store.get())
+
+            return X
         else:
-            return X, np.zeros((self.OUTPUT_SIZE, 1))
+            return X
 
     def update_parameters(self, parameters_struct):
         if not is_dataclass(parameters_struct):
@@ -238,7 +240,7 @@ class NonlinearMPC_TwiceDifferentiable:
             self.U_latest, Y)
         X = self.kalman_filter.x_hat
 
-        X_compensated, Y_offset = self.compensate_X_Y_delay(X, Y)
+        X_compensated = self.compensate_X_Y_delay(X, Y)
 
         self.set_reference_trajectory(reference)
 
@@ -247,7 +249,6 @@ class NonlinearMPC_TwiceDifferentiable:
             cost_and_gradient_function=self.sqp_cost_matrices.compute_cost_and_gradient,
             hvp_function=self.sqp_cost_matrices.hvp_analytic,
             X_initial=X_compensated,
-            Y_offset=Y_offset,
             U_min_matrix=self.sqp_cost_matrices.U_min_matrix,
             U_max_matrix=self.sqp_cost_matrices.U_max_matrix,
         )
