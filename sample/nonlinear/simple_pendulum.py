@@ -53,7 +53,7 @@ def main():
     nx = x_syms.shape[0]
     nu = u_syms.shape[0]
     ny = h.shape[0]
-    Np = 20
+    Np = 10
 
     # define parameters
     state_space_parameters = Parameters()
@@ -94,6 +94,8 @@ def main():
         R_kf=R_ekf,
         Number_of_Delay=Number_of_Delay,
     )
+
+    nmpc.solver.set_solver_max_iteration(10)
 
     x_true = X_initial
     u = np.array([[0.0]])
