@@ -8,6 +8,8 @@ from dataclasses import dataclass
 
 from python_mpc.nonlinear_mpc import NonlinearMPC_TwiceDifferentiable
 
+from sample.simulation_manager.visualize.simulation_plotter import SimulationPlotter
+
 
 def create_plant_model():
     theta, omega, u0, dt, a, b, c, d = sp.symbols(
@@ -37,9 +39,12 @@ class Parameters:
 
 
 def main():
-    # system setting
+    # simulation setup
+    simulation_time = 20.0
     delta_time = 0.05
     Number_of_Delay = 0
+
+    time = np.arange(0, simulation_time, delta_time)
 
     # Create symbolic plant model
     f, h, x_syms, u_syms = create_plant_model()
@@ -58,9 +63,9 @@ def main():
     u_max = np.array([[2.0]])
 
     # weights
-    Weight_U = np.diag([0.05])
-    Weight_X = np.diag([2.5, 0.5])
-    Weight_Y = np.diag([2.5])
+    Weight_U = np.array([0.05])
+    Weight_X = np.array([2.5, 0.5])
+    Weight_Y = np.array([2.5])
 
     Q_ekf = np.diag([1.0, 1.0])
     R_ekf = np.diag([1.0])
@@ -89,6 +94,40 @@ def main():
         R_kf=R_ekf,
         Number_of_Delay=Number_of_Delay,
     )
+
+    x_true = X_initial
+    u = np.array([[0.0]])
+
+    plotter = SimulationPlotter()
+
+    y_measured = np.array([[0.0], [0.0], [0.0], [0.0], [0.0]])
+    y_store = [y_measured] * (Number_of_Delay + 1)
+    delay_index = 0
+
+    # simulation
+    for i in range(round(simulation_time / delta_time)):
+        # system response
+        if i > 0:
+            u = np.copy(u_from_mpc)
+
+        x_true = nmpc.kalman_filter.state_function(
+            x_true, u, state_space_parameters)
+        y_store[delay_index] = nmpc.kalman_filter.measurement_function(
+            x_true, state_space_parameters)
+
+        # system delay
+        delay_index += 1
+        if delay_index > Number_of_Delay:
+            delay_index = 0
+
+        y_measured = y_store[delay_index]
+
+        u_from_mpc = nmpc.update_manipulation(reference, y_measured)
+
+        plotter.append_name(x_true, "x_true")
+        plotter.append_name(reference, "ref")
+        plotter.append_name(y_measured, "y_measured")
+        plotter.append_name(u_from_mpc, "u")
 
 
 if __name__ == "__main__":
