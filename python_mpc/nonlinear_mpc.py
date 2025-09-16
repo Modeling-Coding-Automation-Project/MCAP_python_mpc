@@ -244,7 +244,7 @@ class NonlinearMPC_TwiceDifferentiable:
 
         self.set_reference_trajectory(reference)
 
-        U_horizon, _ = self.solver.solve(
+        U_horizon = self.solver.solve(
             U_initial=self.U_latest,
             cost_and_gradient_function=self.sqp_cost_matrices.compute_cost_and_gradient,
             hvp_function=self.sqp_cost_matrices.hvp_analytic,
