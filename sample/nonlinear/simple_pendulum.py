@@ -40,7 +40,7 @@ class Parameters:
 
 def main():
     # simulation setup
-    simulation_time = 20.0
+    simulation_time = 10.0
     delta_time = 0.05
     Number_of_Delay = 0
 
@@ -125,9 +125,25 @@ def main():
         u_from_mpc = nmpc.update_manipulation(reference, y_measured)
 
         plotter.append_name(x_true, "x_true")
-        plotter.append_name(reference, "ref")
+        plotter.append_name(reference, "reference")
         plotter.append_name(y_measured, "y_measured")
         plotter.append_name(u_from_mpc, "u")
+
+    # plot
+    plotter.assign("y_measured", column=0, row=0, position=(0, 0),
+                   x_sequence=time, label="theta")
+    plotter.assign("reference", column=0, row=0, position=(0, 0),
+                   x_sequence=time, label="theta_ref")
+
+    plotter.assign("x_true", column=0, row=0, position=(1, 0),
+                   x_sequence=time, label="x_0")
+    plotter.assign("x_true", column=1, row=0, position=(0, 1),
+                   x_sequence=time, label="x_1")
+
+    plotter.assign("u", column=0, row=0, position=(1, 1),
+                   x_sequence=time, label="u")
+
+    plotter.plot()
 
 
 if __name__ == "__main__":
