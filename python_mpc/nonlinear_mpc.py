@@ -167,6 +167,9 @@ class NonlinearMPC_TwiceDifferentiable:
 
         return sqp_cost_matrices
 
+    def get_solver_step_iterated_number(self):
+        return self.solver.get_solver_step_iterated_number()
+
     def set_solver_max_iteration(
             self,
             max_iteration: int
