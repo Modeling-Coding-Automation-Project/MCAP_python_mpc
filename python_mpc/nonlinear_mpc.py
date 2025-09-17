@@ -80,7 +80,7 @@ class NonlinearMPC_TwiceDifferentiable:
         self.STATE_SIZE = X.shape[0]
         self.OUTPUT_SIZE = hx.shape[0]
 
-        self.U_latest = np.zeros((self.INPUT_SIZE, 1))
+        self.U_horizon = np.zeros((self.INPUT_SIZE, self.Np))
 
         self.Y_store = DelayedVectorObject(self.OUTPUT_SIZE,
                                            self.Number_of_Delay)
@@ -239,18 +239,18 @@ class NonlinearMPC_TwiceDifferentiable:
             reference: np.ndarray,
             Y: np.ndarray
     ):
+        U_latest = self.calculate_this_U(self.U_horizon)
+
         self.kalman_filter.predict_and_update(
-            self.U_latest, Y)
+            U_latest, Y)
         X = self.kalman_filter.x_hat
 
         X_compensated = self.compensate_X_Y_delay(X, Y)
 
         self.set_reference_trajectory(reference)
 
-        U_initial = np.tile(self.U_latest, (1, self.Np))
-
-        U_horizon = self.solver.solve(
-            U_initial=U_initial,
+        self.U_horizon = self.solver.solve(
+            U_initial=self.U_horizon,
             cost_and_gradient_function=self.sqp_cost_matrices.compute_cost_and_gradient,
             hvp_function=self.sqp_cost_matrices.hvp_analytic,
             X_initial=X_compensated,
@@ -258,6 +258,6 @@ class NonlinearMPC_TwiceDifferentiable:
             U_max_matrix=self.sqp_cost_matrices.U_max_matrix,
         )
 
-        self.U_latest = self.calculate_this_U(U_horizon)
+        U_latest = self.calculate_this_U(self.U_horizon)
 
-        return self.U_latest
+        return U_latest
