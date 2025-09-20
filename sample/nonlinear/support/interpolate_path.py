@@ -177,4 +177,7 @@ def interpolate_path_csv(input_path, delta_time, total_time=None):
     fig.savefig(out_path)
     plt.close(fig)
 
-    return times, xs_interp, ys_interp, yaws_wrapped
+    return np.array(times).reshape(-1, 1), \
+        np.array(xs_interp).reshape(-1, 1), \
+        np.array(ys_interp).reshape(-1, 1), \
+        np.array(yaws_wrapped).reshape(-1, 1)
