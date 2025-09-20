@@ -55,7 +55,20 @@ def main():
         total_time=60.0
     )
 
-    a = 1
+    plotter = SimulationPlotter()
+
+    plotter.append_sequence_name(xs_i, "x_ref")
+    plotter.append_sequence_name(ys_i, "y_ref")
+    plotter.append_sequence_name(yaws_i, "yaw_ref")
+
+    plotter.assign("x_ref", column=0, row=0, position=(0, 0),
+                   x_sequence=times, label="x_ref")
+    plotter.assign("y_ref", column=0, row=0, position=(1, 0),
+                   x_sequence=times, label="y_ref")
+    plotter.assign("yaw_ref", column=0, row=0, position=(2, 0),
+                   x_sequence=times, label="yaw_ref")
+
+    plotter.plot()
 
 
 if __name__ == "__main__":

@@ -134,8 +134,6 @@ def interpolate_path_csv(input_path, delta_time, total_time=None):
         xs, ys, yaws, total_time, delta_time
     )
 
-    matplotlib.use('Agg')
-
     fig, axs = plt.subplots(3, 1, figsize=(8, 10), sharex=True)
 
     # Times for original points (distribute along total_time)
