@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from python_mpc.nonlinear_mpc import NonlinearMPC_TwiceDifferentiable
 
 from sample.simulation_manager.visualize.simulation_plotter import SimulationPlotter
+from sample.nonlinear.interpolate_path import interpolate_path_csv
 
 
 def create_plant_model():
@@ -47,6 +48,14 @@ def create_plant_model():
 
 def main():
     fxu, hx, x_syms, u_syms = create_plant_model()
+
+    times, xs_i, ys_i, yaws_i = interpolate_path_csv(
+        input_path="./sample/nonlinear/office_area_RRT_path_data.csv",
+        delta_time=0.1,
+        total_time=60.0
+    )
+
+    a = 1
 
 
 if __name__ == "__main__":
