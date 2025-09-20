@@ -49,18 +49,15 @@ def main():
     # Create symbolic plant model
     f, h, x_syms, u_syms = create_plant_model()
 
-    # system dimensions
-    nx = x_syms.shape[0]
-    nu = u_syms.shape[0]
-    ny = h.shape[0]
+    # Prediction horizon
     Np = 10
 
     # define parameters
     state_space_parameters = Parameters()
 
     # input bounds
-    u_min = np.array([[-2.0]])
-    u_max = np.array([[2.0]])
+    U_min = np.array([[-2.0]])
+    U_max = np.array([[2.0]])
 
     # weights
     Weight_U = np.array([0.05])
@@ -88,8 +85,8 @@ def main():
         Weight_U=Weight_U,
         Weight_X=Weight_X,
         Weight_Y=Weight_Y,
-        U_min=u_min,
-        U_max=u_max,
+        U_min=U_min,
+        U_max=U_max,
         Q_kf=Q_ekf,
         R_kf=R_ekf,
         Number_of_Delay=Number_of_Delay,
