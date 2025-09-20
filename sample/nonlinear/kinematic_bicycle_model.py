@@ -194,14 +194,14 @@ def main():
         plotter.append_name(delta, "delta")
         plotter.append_name(solver_iteration, "solver_iteration")
 
-    plotter.assign("x_ref", column=0, row=0, position=(0, 0),
-                   x_sequence=times, label="x_ref")
+    plotter.assign("px_ref", column=0, row=0, position=(0, 0),
+                   x_sequence=times, label="px_ref")
     plotter.assign("px_measured", column=0, row=0, position=(0, 0),
                    x_sequence=times, label="px_measured")
-    plotter.assign("y_ref", column=0, row=0, position=(1, 0),
-                   x_sequence=times, label="y_ref")
-    plotter.assign("y_measured", column=0, row=0, position=(1, 0),
-                   x_sequence=times, label="y_measured")
+    plotter.assign("py_ref", column=0, row=0, position=(1, 0),
+                   x_sequence=times, label="py_ref")
+    plotter.assign("py_measured", column=0, row=0, position=(1, 0),
+                   x_sequence=times, label="py_measured")
     plotter.assign("yaw_ref", column=0, row=0, position=(2, 0),
                    x_sequence=times, label="yaw_ref")
     plotter.assign("yaw_measured", column=0, row=0, position=(2, 0),
