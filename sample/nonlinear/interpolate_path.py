@@ -5,6 +5,39 @@ from pathlib import Path
 import numpy as np
 
 
+def unwrap_angle(angle_vec):
+    angle_vec_wrapped = np.zeros_like(angle_vec)
+    angle_vec_wrapped[0] = angle_vec[0]
+
+    for i in range(1, len(angle_vec)):
+        dif = angle_vec[i] - angle_vec_wrapped[i - 1]
+        if dif > math.pi:
+            dif -= 2 * math.pi
+        elif dif < -math.pi:
+            dif += 2 * math.pi
+        angle_vec_wrapped[i] = angle_vec_wrapped[i - 1] + dif
+
+    return angle_vec_wrapped
+
+
+def wrap_angle(angle_vec):
+    angle_vec_wrapped = np.zeros_like(angle_vec)
+    for i in range(len(angle_vec)):
+        angle_vec_wrapped[i] = angle_vec[i]
+
+        while angle_vec_wrapped[i] > 2 * math.pi:
+            angle_vec_wrapped[i] -= 2 * math.pi
+        while angle_vec_wrapped[i] < -2 * math.pi:
+            angle_vec_wrapped[i] += 2 * math.pi
+
+        if angle_vec_wrapped[i] > math.pi:
+            angle_vec_wrapped[i] -= 2 * math.pi
+        elif angle_vec_wrapped[i] < -math.pi:
+            angle_vec_wrapped[i] += 2 * math.pi
+
+    return angle_vec_wrapped
+
+
 def read_path_csv(path):
     xs = []
     ys = []
@@ -45,10 +78,10 @@ def interpolate_path(xs, ys, yaws, total_time, delta_time):
     ys_interp = np.interp(frac, param, ys)
 
     # Handle yaw (angles) by unwrapping
-    yaws_unwrapped = np.unwrap(yaws)
+    yaws_unwrapped = unwrap_angle(yaws)
     yaws_interp = np.interp(frac, param, yaws_unwrapped)
     # Wrap back to [-pi, pi]
-    yaws_wrapped = (yaws_interp + math.pi) % (2 * math.pi) - math.pi
+    yaws_wrapped = wrap_angle(yaws_interp)
 
     return times, xs_interp, ys_interp, yaws_wrapped
 
