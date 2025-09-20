@@ -1,126 +1,180 @@
 import csv
 import math
+import os
 from pathlib import Path
+import matplotlib
+import matplotlib.pyplot as plt
 
 import numpy as np
 
 
-def unwrap_angle(angle_vec):
-    angle_vec_wrapped = np.zeros_like(angle_vec)
-    angle_vec_wrapped[0] = angle_vec[0]
-
-    for i in range(1, len(angle_vec)):
-        dif = angle_vec[i] - angle_vec_wrapped[i - 1]
-        if dif > math.pi:
-            dif -= 2 * math.pi
-        elif dif < -math.pi:
-            dif += 2 * math.pi
-        angle_vec_wrapped[i] = angle_vec_wrapped[i - 1] + dif
-
-    return angle_vec_wrapped
+def wrap_pi(a):
+    """
+    wrap angle to [-pi, pi]
+    """
+    a = (a + math.pi) % (2.0 * math.pi) - math.pi
+    return a
 
 
-def wrap_angle(angle_vec):
-    angle_vec_wrapped = np.zeros_like(angle_vec)
-    for i in range(len(angle_vec)):
-        angle_vec_wrapped[i] = angle_vec[i]
+def ang_shortest_delta(a0, a1):
+    """
+    Return the shortest angle difference Δ = a1 - a0 normalized to [-pi, pi].
+    """
+    return math.atan2(math.sin(a1 - a0), math.cos(a1 - a0))
 
-        while angle_vec_wrapped[i] > 2 * math.pi:
-            angle_vec_wrapped[i] -= 2 * math.pi
-        while angle_vec_wrapped[i] < -2 * math.pi:
-            angle_vec_wrapped[i] += 2 * math.pi
 
-        if angle_vec_wrapped[i] > math.pi:
-            angle_vec_wrapped[i] -= 2 * math.pi
-        elif angle_vec_wrapped[i] < -math.pi:
-            angle_vec_wrapped[i] += 2 * math.pi
-
-    return angle_vec_wrapped
+def ang_lerp(a0, a1, t):
+    """
+    Linear interpolation of angles (shortest rotation).
+    a(t) = a0 + t * Δ where Δ is normalized to [-pi, pi].
+    The return value is wrapped to [-pi, pi].
+    """
+    return wrap_pi(a0 + t * ang_shortest_delta(a0, a1))
 
 
 def read_path_csv(path):
-    xs = []
-    ys = []
-    yaws = []
-    with open(path, newline='') as f:
+    """
+    Read path from CSV file with columns: x, y, yaw (in radians).
+    """
+    xs, ys, yaws = [], [], []
+    with open(path, newline="") as f:
         reader = csv.DictReader(f)
         for row in reader:
-            xs.append(float(row['x']))
-            ys.append(float(row['y']))
-            yaws.append(float(row['yaw']))
+            xs.append(float(row["x"]))
+            ys.append(float(row["y"]))
+            yaws.append(float(row["yaw"]))
     return np.array(xs), np.array(ys), np.array(yaws)
 
 
 def interpolate_path(xs, ys, yaws, total_time, delta_time):
+    """
+    Interpolate path (x, y, yaw) given as arrays of points.
+    The output is sampled at every delta_time, and the total duration is total_time.
+    Yaw is interpolated considering the shortest rotation.
+    """
     if total_time <= 0:
-        raise ValueError('total_time must be > 0')
+        raise ValueError("total_time must be > 0")
     if delta_time <= 0:
-        raise ValueError('delta_time must be > 0')
+        raise ValueError("delta_time must be > 0")
+    n = len(xs)
+    if n == 0:
+        raise ValueError("empty path")
+    if n == 1:
+        # 単一点なら定値で返す
+        times = np.arange(0.0, total_time + 1e-12, delta_time)
+        return (times,
+                np.full_like(times, xs[0], dtype=float),
+                np.full_like(times, ys[0], dtype=float),
+                np.full_like(times, wrap_pi(yaws[0]), dtype=float))
 
-    # Parameterize original path by cumulative distance (arc-length)
-    diffs = np.sqrt(np.diff(xs)**2 + np.diff(ys)**2)
+    # 弧長パラメータ（累積距離）
+    diffs = np.sqrt(np.diff(xs) ** 2 + np.diff(ys) ** 2)
     cumdist = np.concatenate(([0.0], np.cumsum(diffs)))
-    total_dist = cumdist[-1]
+    total_dist = float(cumdist[-1])
 
-    # Normalize to [0,1] along the path; if all points equal, fallback to index-based param
-    if total_dist == 0:
-        param = np.linspace(0.0, 1.0, len(xs))
+    # 正規化パラメータ param in [0,1]
+    if total_dist == 0.0:
+        # すべて同一点ならインデックスで代用
+        param = np.linspace(0.0, 1.0, n)
     else:
         param = cumdist / total_dist
 
-    # Desired output times and corresponding normalized parameter values (by time fraction)
+    # 出力の時間列と、その正規化位置（0..1）
     times = np.arange(0.0, total_time + 1e-12, delta_time)
-    frac = times / total_time
-    frac = np.clip(frac, 0.0, 1.0)
+    frac = np.clip(times / total_time, 0.0, 1.0)
 
-    # Interpolate x and y as functions of fraction
-    xs_interp = np.interp(frac, param, xs)
-    ys_interp = np.interp(frac, param, ys)
+    # どの区間に属するか（右側が境界）→ i は 0..n-2 にクリップ
+    idx = np.searchsorted(param, frac, side="right") - 1
+    idx = np.clip(idx, 0, n - 2)
 
-    # Handle yaw (angles) by unwrapping
-    yaws_unwrapped = unwrap_angle(yaws)
-    yaws_interp = np.interp(frac, param, yaws_unwrapped)
-    # Wrap back to [-pi, pi]
-    yaws_wrapped = wrap_angle(yaws_interp)
+    # 区間内の局所重み tlocal = (s - s_i) / (s_{i+1}-s_i)
+    denom = (param[idx + 1] - param[idx])
+    # ゼロ長区間（重複点）対策
+    safe_denom = np.where(denom > 0.0, denom, 1.0)
+    tlocal = (frac - param[idx]) / safe_denom
+    tlocal = np.clip(tlocal, 0.0, 1.0)
+
+    # x, y は通常の線形補間
+    xs0, xs1 = xs[idx], xs[idx + 1]
+    ys0, ys1 = ys[idx], ys[idx + 1]
+    xs_interp = xs0 + (xs1 - xs0) * tlocal
+    ys_interp = ys0 + (ys1 - ys0) * tlocal
+
+    # yaw は最短角差で補間（区間ごと）
+    y0, y1 = yaws[idx], yaws[idx + 1]
+    # ベクトル化した角度補間
+    deltas = np.vectorize(ang_shortest_delta)(y0, y1)
+    yaws_interp = y0 + deltas * tlocal
+    # 最後に [-pi, pi] へ wrap
+    yaws_wrapped = np.vectorize(wrap_pi)(yaws_interp)
 
     return times, xs_interp, ys_interp, yaws_wrapped
 
 
 def interpolate_path_csv(input_path, delta_time, total_time=None):
     """
-    Read a path CSV, compute a sensible total_time from the path, and
-    return/interpolate the path sampled every `delta_time` seconds.
-
-    Assumption: we set the nominal speed to 1.0 so that time is equal to
-    arc-length along the path. In other words total_time = total_path_length.
-
-    Args:
-        input_path (str or Path): path to the input CSV with columns x,y,yaw
-        delta_time (float): desired sampling timestep for interpolated data
-
-    Returns:
-        times, xs_i, ys_i, yaws_i (numpy arrays)
+    Read path from a CSV file (columns: x, y, yaw in radians) and interpolate it.
+    The output is sampled at every delta_time, and the total duration is total_time.
+    If total_time is None, it is set to the path length assuming a nominal speed of 1.0.
     """
     input_path = Path(input_path)
     if not input_path.exists():
-        raise FileNotFoundError(f'Input CSV not found: {input_path}')
+        raise FileNotFoundError(f"Input CSV not found: {input_path}")
 
     xs, ys, yaws = read_path_csv(input_path)
 
-    # compute cumulative distance (arc-length)
-    diffs = np.sqrt(np.diff(xs)**2 + np.diff(ys)**2)
-    cumdist = np.concatenate(([0.0], np.cumsum(diffs)))
-    total_dist = float(cumdist[-1])
+    diffs = np.sqrt(np.diff(xs) ** 2 + np.diff(ys) **
+                    2) if len(xs) > 1 else np.array([])
+    total_dist = float(diffs.sum()) if diffs.size > 0 else 0.0
 
-    # Determine total_time: use provided value if given, otherwise infer
-    # from path length (assume nominal speed = 1.0 so time = distance).
     if total_time is None:
-        if total_dist <= 0.0:
-            total_time = 1.0
-        else:
-            total_time = total_dist
+        total_time = total_dist if total_dist > 0.0 else 1.0
 
-    times, xs_i, ys_i, yaws_i = interpolate_path(
-        xs, ys, yaws, total_time, delta_time)
+    times, xs_interp, ys_interp, yaws_wrapped = interpolate_path(
+        xs, ys, yaws, total_time, delta_time
+    )
 
-    return times, xs_i, ys_i, yaws_i
+    matplotlib.use('Agg')
+
+    fig, axs = plt.subplots(3, 1, figsize=(8, 10), sharex=True)
+
+    # Times for original points (distribute along total_time)
+    n = len(xs)
+    if total_time > 0:
+        times_orig = np.linspace(0.0, total_time, n)
+    else:
+        times_orig = np.arange(n)
+
+    # X
+    axs[0].plot(times_orig, xs, 'o-', label='original', markersize=4)
+    axs[0].plot(times, xs_interp, '-', label='interpolated')
+    axs[0].set_ylabel('x')
+    axs[0].legend()
+
+    # Y
+    axs[1].plot(times_orig, ys, 'o-', label='original', markersize=4)
+    axs[1].plot(times, ys_interp, '-', label='interpolated')
+    axs[1].set_ylabel('y')
+    axs[1].legend()
+
+    # Yaw (wrap for original)
+    from math import pi
+
+    def wrap(a):
+        return (a + pi) % (2.0 * pi) - pi
+
+    yaws_orig_wrapped = np.vectorize(wrap)(yaws)
+
+    axs[2].plot(times_orig, yaws_orig_wrapped, 'o-',
+                label='original', markersize=4)
+    axs[2].plot(times, yaws_wrapped, '-', label='interpolated')
+    axs[2].set_ylabel('yaw')
+    axs[2].set_xlabel('time [s]')
+    axs[2].legend()
+
+    fig.tight_layout()
+    out_path = Path(os.path.join(os.getcwd(), "check_interpolated_path.png"))
+    fig.savefig(out_path)
+    plt.close(fig)
+
+    return times, xs_interp, ys_interp, yaws_wrapped
