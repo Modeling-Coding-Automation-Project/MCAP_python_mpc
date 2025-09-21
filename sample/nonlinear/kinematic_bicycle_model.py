@@ -134,8 +134,7 @@ def main():
     delay_index = 0
 
     # simulation
-    # for i in range(round(simulation_time / delta_time)):
-    for i in range(10):
+    for i in range(round(simulation_time / delta_time)):
         # system response
         if i > 0:
             u = np.copy(u_from_mpc)
