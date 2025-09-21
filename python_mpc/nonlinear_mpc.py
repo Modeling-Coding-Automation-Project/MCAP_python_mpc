@@ -29,9 +29,9 @@ class NonlinearMPC_TwiceDifferentiable:
         hx: sp.Matrix,
         parameters_struct,
         Np: int,
-        Weight_U: np.ndarray,
-        Weight_X: np.ndarray,
-        Weight_Y: np.ndarray,
+        Weight_U: np.ndarray = None,
+        Weight_X: np.ndarray = None,
+        Weight_Y: np.ndarray = None,
         U_min: np.ndarray = None,
         U_max: np.ndarray = None,
         Y_min: np.ndarray = None,
@@ -87,6 +87,14 @@ class NonlinearMPC_TwiceDifferentiable:
 
         # initialize state
         self.X_inner_model = X_initial
+
+        # initialize weights
+        if Weight_U is None:
+            Weight_U = np.zeros((self.INPUT_SIZE,))
+        if Weight_X is None:
+            Weight_X = np.zeros((self.STATE_SIZE,))
+        if Weight_Y is None:
+            Weight_Y = np.zeros((self.OUTPUT_SIZE,))
 
         self.sqp_cost_matrices = self.generate_cost_matrices(
             X_symbolic=X,

@@ -74,7 +74,6 @@ def main():
 
     # weights
     Weight_U = np.array([0.05, 0.05])
-    Weight_X = np.array([0.0, 0.0, 0.0, 0.0])
     Weight_Y = np.array([1.0, 1.0, 1.0, 1.0])
 
     Q_ekf = np.diag([1.0, 1.0, 1.0, 1.0])
@@ -113,7 +112,6 @@ def main():
         parameters_struct=state_space_parameters,
         Np=Np,
         Weight_U=Weight_U,
-        Weight_X=Weight_X,
         Weight_Y=Weight_Y,
         U_min=U_min,
         U_max=U_max,
