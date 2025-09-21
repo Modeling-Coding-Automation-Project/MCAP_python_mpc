@@ -11,6 +11,10 @@ reference trajectory tracking,
 and quadratic programming-based constraint handling.
 """
 import os
+import sys
+sys.path.append(os.path.join(
+    os.getcwd(), 'external_libraries', 'MCAP_python_optimization'))
+
 import inspect
 import numpy as np
 import sympy as sp
@@ -32,8 +36,10 @@ USE_QR_DECOMPOSITION_FOR_SOLVER_FACTOR = True
 # Common Functions
 
 
-def create_reference_trajectory(is_ref_trajectory: bool, Np: int,
-                                reference_trajectory: np.ndarray):
+def create_reference_trajectory(
+        is_ref_trajectory: bool, Np: int,
+        reference_trajectory: np.ndarray
+):
     """
     Creates a reference trajectory object for Model Predictive Control (MPC).
     Parameters:
@@ -277,8 +283,12 @@ class LTI_MPC_NoConstraints:
 
         self.is_ref_trajectory = is_ref_trajectory
 
-    def initialize_kalman_filter(self, state_space: SymbolicStateSpace,
-                                 Q_kf: np.ndarray, R_kf: np.ndarray) -> LinearKalmanFilter:
+    def initialize_kalman_filter(
+            self,
+            state_space: SymbolicStateSpace,
+            Q_kf: np.ndarray,
+            R_kf: np.ndarray
+    ) -> LinearKalmanFilter:
         """
         Initializes the Kalman filter for state estimation.
         Args:
@@ -485,14 +495,6 @@ class LTV_MPC_NoConstraints:
         # inspect arguments
         # Get the caller's frame
         frame = inspect.currentframe().f_back
-        # Get the caller's local variables
-        caller_locals = frame.f_locals
-        # Find the variable name that matches the matrix_in value
-        variable_name = None
-        for name, value in caller_locals.items():
-            if value is state_space:
-                variable_name = name
-                break
         # Get the caller's file name
         if caller_file_name is None:
             caller_file_full_path = frame.f_code.co_filename
@@ -579,9 +581,13 @@ class LTV_MPC_NoConstraints:
 
         self.is_ref_trajectory = is_ref_trajectory
 
-    def initialize_kalman_filter(self, state_space: SymbolicStateSpace,
-                                 parameters_struct,
-                                 Q_kf: np.ndarray, R_kf: np.ndarray) -> LinearKalmanFilter:
+    def initialize_kalman_filter(
+            self,
+            state_space: SymbolicStateSpace,
+            parameters_struct,
+            Q_kf: np.ndarray,
+            R_kf: np.ndarray
+    ) -> LinearKalmanFilter:
         """
         Initializes and returns a LinearKalmanFilter object
           using the provided symbolic state space, parameters, and noise covariances.
