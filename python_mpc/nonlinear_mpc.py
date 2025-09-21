@@ -252,6 +252,7 @@ class NonlinearMPC_TwiceDifferentiable:
         self.U_horizon = self.solver.solve(
             U_initial=self.U_horizon,
             cost_and_gradient_function=self.sqp_cost_matrices.compute_cost_and_gradient,
+            cost_function=self.sqp_cost_matrices.compute_cost,
             hvp_function=self.sqp_cost_matrices.hvp_analytic,
             X_initial=X_compensated,
             U_min_matrix=self.sqp_cost_matrices.U_min_matrix,
