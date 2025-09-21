@@ -1,3 +1,14 @@
+"""
+File: nonlinear_mpc.py
+
+NonlinearMPC_TwiceDifferentiable implements a nonlinear model predictive control
+(NMPC) algorithm for twice-differentiable systems.
+It utilizes symbolic computation for system dynamics and measurement equations,
+and employs an Extended Kalman Filter (EKF) for state estimation.
+The NonlinearMPC_TwiceDifferentiable optimization is solved using a
+Sequential Quadratic Programming (SQP)
+method with an active-set strategy and preconditioned conjugate gradient solver.
+"""
 import os
 import sys
 sys.path.append(os.path.join(
@@ -19,6 +30,37 @@ NMPC_SOLVER_MAX_ITERATION_DEFAULT = 20
 
 
 class NonlinearMPC_TwiceDifferentiable:
+    """
+    NonlinearMPC_TwiceDifferentiable implements a nonlinear model predictive control
+    (NMPC) algorithm for twice-differentiable systems.
+    It utilizes symbolic computation for system dynamics and measurement equations,
+    and employs an Extended Kalman Filter (EKF) for state estimation.
+    The NonlinearMPC_TwiceDifferentiable optimization is solved using a
+    Sequential Quadratic Programming (SQP)
+    method with an active-set strategy and preconditioned conjugate gradient solver.
+
+    Args:
+        delta_time (float): Sampling time interval of the discrete-time system.
+        X (sp.Matrix): Symbolic state vector.
+        U (sp.Matrix): Symbolic input vector.
+        X_initial (np.ndarray): Initial state estimate.
+        fxu (sp.Matrix): Symbolic state transition function f(x, u).
+        hx (sp.Matrix): Symbolic measurement function h(x).
+        parameters_struct: Additional parameters required for the state and measurement functions.
+        Np (int): Prediction horizon length.
+        Weight_U (np.ndarray, optional): Weighting matrix for input in the cost function. Defaults to zero matrix.
+        Weight_X (np.ndarray, optional): Weighting matrix for state in the cost function. Defaults to zero matrix.
+        Weight_Y (np.ndarray, optional): Weighting matrix for output in the cost function. Defaults to zero matrix.
+        U_min (np.ndarray, optional): Minimum input constraints. Defaults to None.
+        U_max (np.ndarray, optional): Maximum input constraints. Defaults to None.
+        Y_min (np.ndarray, optional): Minimum output constraints. Defaults to None.
+        Y_max (np.ndarray, optional): Maximum output constraints. Defaults to None.
+        Q_kf (np.ndarray, optional): Process noise covariance for EKF. Defaults to identity matrix.
+        R_kf (np.ndarray, optional): Measurement noise covariance for EKF. Defaults to identity matrix.
+        Number_of_Delay (int, optional): Number of delay steps in the system. Defaults to 0.
+        caller_file_name (str, optional): Filename of the caller script for naming generated files. Defaults to None.
+    """
+
     def __init__(
         self,
         delta_time: float,
@@ -153,6 +195,31 @@ class NonlinearMPC_TwiceDifferentiable:
             Y_max: np.ndarray,
             caller_file_name: str,
     ):
+        """
+        Generates cost matrices for nonlinear model predictive control (NMPC).
+        Constructs diagonal weighting matrices for states, outputs,
+        and inputs, and initializes
+        an SQP_CostMatrices_NMPC object with the provided symbolic variables,
+        system equations, prediction horizon, constraints, and weights.
+
+        Args:
+            X_symbolic (sp.Matrix): Symbolic state variables.
+            U_symbolic (sp.Matrix): Symbolic input variables.
+            fxu (sp.Matrix): Symbolic state transition equation vector.
+            hx (sp.Matrix): Symbolic measurement/output equation vector.
+            Np (int): Prediction horizon.
+            Weight_U (np.ndarray): Weights for input variables.
+            Weight_X (np.ndarray): Weights for state variables.
+            Weight_Y (np.ndarray): Weights for output variables.
+            U_min (np.ndarray): Minimum input constraints.
+            U_max (np.ndarray): Maximum input constraints.
+            Y_min (np.ndarray): Minimum output constraints.
+            Y_max (np.ndarray): Maximum output constraints.
+            caller_file_name (str): Name of the calling file for reference.
+        Returns:
+            SQP_CostMatrices_NMPC: An object containing the generated cost matrices
+            and constraints for NMPC.
+        """
         Qx = np.diag(Weight_X)
         Qy = np.diag(Weight_Y)
         R = np.diag(Weight_U)
@@ -176,19 +243,62 @@ class NonlinearMPC_TwiceDifferentiable:
         return sqp_cost_matrices
 
     def get_solver_step_iterated_number(self):
+        """
+        Returns the number of iterations performed by the solver in the current step.
+        This method calls the corresponding function of the solver object to retrieve
+        the number of iterations executed during the most recent solver step.
+
+        Returns:
+            int: The number of iterations performed by the solver in the current step.
+        """
         return self.solver.get_solver_step_iterated_number()
 
     def set_solver_max_iteration(
             self,
             max_iteration: int
     ):
+        """
+        Set the maximum number of iterations for the solver.
+        Parameters
+        ----------
+        max_iteration : int
+            The maximum number of iterations the solver is allowed to perform.
+        Returns
+        -------
+        None
+        """
         self.solver.set_solver_max_iteration(max_iteration)
 
     def set_reference_trajectory(
             self,
             reference_trajectory: np.ndarray
     ):
+        """
+        Sets the reference trajectory for the nonlinear MPC controller.
 
+        Parameters
+        ----------
+        reference_trajectory : np.ndarray
+            Reference trajectory array of shape (OUTPUT_SIZE, Np) or (OUTPUT_SIZE, 1).
+            - If shape is (OUTPUT_SIZE, Np): uses the provided trajectory
+              for each prediction step,
+                and extends the last value to Np+1.
+            - If shape is (OUTPUT_SIZE, 1): uses the single reference value
+              for all prediction steps.
+
+        Raises
+        ------
+        ValueError
+            If the reference_trajectory does not have shape (OUTPUT_SIZE, Np)
+              or (OUTPUT_SIZE, 1).
+
+        Notes
+        -----
+        The reference trajectory is stored in
+        `self.sqp_cost_matrices.reference_trajectory`
+        with shape (OUTPUT_SIZE, Np + 1), where the last column is either the last value
+        of the provided trajectory or the single reference value.
+        """
         if not ((reference_trajectory.shape[1] == self.Np) or
                 (reference_trajectory.shape[1] == 1)):
             raise ValueError(
@@ -213,11 +323,48 @@ class NonlinearMPC_TwiceDifferentiable:
                         reference_trajectory[i, 0]
 
     def calculate_this_U(self, U_horizon):
+        """
+        Extracts and reshapes the first column of the input horizon matrix.
 
+        Parameters
+        ----------
+        U_horizon : np.ndarray
+            A 2D array representing the input horizon,
+              where each column corresponds to an input vector at a time step.
+
+        Returns
+        -------
+        np.ndarray
+            A 2D array of shape (self.INPUT_SIZE, 1) containing the
+              input vector for the first time step.
+        """
         return U_horizon[:, 0].reshape((self.INPUT_SIZE, 1))
 
     def compensate_X_Y_delay(self, X: np.ndarray, Y: np.ndarray):
+        """
+        Compensates for measurement delay in the X and Y signals
+        using a Kalman filter and updates internal state.
 
+        Parameters
+        ----------
+        X : np.ndarray
+            The current state estimate (possibly delayed).
+        Y : np.ndarray
+            The current measurement (possibly delayed).
+
+        Returns
+        -------
+        np.ndarray
+            The compensated state estimate after delay correction.
+
+        Notes
+        -----
+        - If `Number_of_Delay` is greater than zero, the function uses
+          the Kalman filter to obtain the undelayed state estimate and measurement,
+          updates the internal measurement store,
+            and adjusts the SQP cost matrices with the measurement offset.
+        - If there is no delay, the input state `X` is returned unchanged.
+        """
         if self.Number_of_Delay > 0:
             Y_measured = Y
 
@@ -235,6 +382,17 @@ class NonlinearMPC_TwiceDifferentiable:
             return X
 
     def update_parameters(self, parameters_struct):
+        """
+        Updates the internal parameters of the nonlinear MPC controller.
+        This method assigns the provided dataclass instance `parameters_struct` to
+        the `state_space_parameters` attribute of `sqp_cost_matrices` and the
+        `Parameters` attribute of `kalman_filter`.
+        Args:
+            parameters_struct: A dataclass instance containing the updated parameters
+                for the controller.
+        Raises:
+            ValueError: If `parameters_struct` is not a dataclass instance.
+        """
         if not is_dataclass(parameters_struct):
             raise ValueError(
                 "parameters_struct must be a dataclass instance.")
@@ -247,6 +405,27 @@ class NonlinearMPC_TwiceDifferentiable:
             reference: np.ndarray,
             Y: np.ndarray
     ):
+        """
+        Updates the manipulation input for the nonlinear MPC controller.
+        This method performs the following steps:
+        1. Calculates the latest control input (`U_latest`) based on
+          the current control horizon.
+        2. Updates the internal Kalman filter state estimate using the
+          latest control input and measurement `Y`.
+        3. Compensates the state estimate for any delay between state (`X`)
+          and measurement (`Y`).
+        4. Sets the reference trajectory for the MPC optimization.
+        5. Solves the MPC optimization problem to update the control horizon
+          (`U_horizon`) using the provided cost functions and constraints.
+        6. Calculates and returns the latest control input after optimization.
+
+        Args:
+            reference (np.ndarray): The reference trajectory or setpoint
+              for the MPC controller.
+            Y (np.ndarray): The latest measurement vector.
+        Returns:
+            np.ndarray: The latest calculated control input to be applied.
+        """
         U_latest = self.calculate_this_U(self.U_horizon)
 
         self.kalman_filter.predict_and_update(

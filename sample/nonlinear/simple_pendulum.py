@@ -1,3 +1,10 @@
+"""
+File: simple_pendulum.py
+
+This module simulates a nonlinear pendulum system using Model Predictive Control (MPC).
+It defines the pendulum dynamics, sets up the MPC controller, and runs a simulation
+over a specified time horizon. The results are visualized using matplotlib.
+"""
 import os
 import sys
 sys.path.append(os.getcwd())

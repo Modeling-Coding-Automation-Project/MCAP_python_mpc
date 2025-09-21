@@ -1,3 +1,9 @@
+"""
+File: mpc_common.py
+
+This module provides common utilities for Model Predictive Control (MPC) implementations,
+including initialization of an Extended Kalman Filter (EKF) for state estimation.
+"""
 import numpy as np
 import sympy as sp
 from dataclasses import is_dataclass

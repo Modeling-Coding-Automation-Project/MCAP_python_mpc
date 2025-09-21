@@ -1,3 +1,16 @@
+"""
+File: kinematic_bicycle_model.py
+
+This script implements and simulates a nonlinear Model Predictive Control (MPC)
+system for a kinematic bicycle model.
+The vehicle dynamics are symbolically derived using SymPy,
+including the state-space and measurement models and their Jacobians.
+The simulation runs a closed-loop control scenario,
+where the MPC tracks a reference trajectory for vehicle position and
+orientation while respecting input constraints.
+The code also visualizes the results using a custom plotter,
+allowing analysis of the controller's performance over time.
+"""
 import os
 import sys
 sys.path.append(os.getcwd())
