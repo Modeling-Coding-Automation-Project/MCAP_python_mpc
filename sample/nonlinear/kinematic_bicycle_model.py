@@ -82,8 +82,8 @@ def main():
     state_space_parameters = Parameters()
 
     # input bounds
-    U_min = np.array([[-2.0], [-1.5]])
-    U_max = np.array([[2.0], [1.5]])
+    U_min = np.array([[-1.0], [-1.5]])
+    U_max = np.array([[1.0], [1.5]])
 
     # weights
     Weight_U = np.array([0.05, 0.05])
@@ -103,11 +103,6 @@ def main():
 
     q0_reference = np.cos(yaw_reference * 0.5)
     q3_reference = np.sin(yaw_reference * 0.5)
-
-    x_plant = px_reference
-    y_plant = py_reference
-    q0_plant = q0_reference
-    q3_plant = q3_reference
 
     # Nonlinear MPC object
     X_initial = np.array([[px_reference[0, 0]],
