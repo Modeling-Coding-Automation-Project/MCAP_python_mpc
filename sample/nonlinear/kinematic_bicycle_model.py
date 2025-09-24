@@ -136,7 +136,7 @@ def main():
     x_true = X_initial
     u = np.array([[0.0], [0.0]])
 
-    nmpc.solver.set_solver_max_iteration(10)
+    nmpc.solver.set_solver_max_iteration(5)
 
     plotter = SimulationPlotter()
 
