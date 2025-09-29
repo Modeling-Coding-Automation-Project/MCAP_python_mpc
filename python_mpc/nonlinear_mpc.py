@@ -177,6 +177,10 @@ class NonlinearMPC_TwiceDifferentiable:
             U_size=(self.INPUT_SIZE, self.Np)
         )
 
+        diag_R = np.diag(self.sqp_cost_matrices.R).reshape(
+            (self.INPUT_SIZE, 1))
+        self.solver.set_diag_R_full(np.tile(diag_R, (1, self.Np)))
+
         self.solver.set_solver_max_iteration(NMPC_SOLVER_MAX_ITERATION_DEFAULT)
 
     def generate_cost_matrices(
