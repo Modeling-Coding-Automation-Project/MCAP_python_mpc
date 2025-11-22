@@ -49,13 +49,13 @@ def create_input_signal(dt, time, Np):
 
 def get_reference_signal(input_signal, index, Np):
     if PATH_FOLLOWING:
-        ref = np.zeros((1, Np))
+        reference = np.zeros((1, Np))
         for i in range(Np):
-            ref[0, i] = input_signal[index + i, 0]
+            reference[0, i] = input_signal[index + i, 0]
     else:
-        ref = np.array([[input_signal[index, 0]]])
+        reference = np.array([[input_signal[index, 0]]])
 
-    return ref
+    return reference
 
 
 def main():
@@ -123,15 +123,16 @@ def main():
         y_measured = y_store[delay_index]
 
         # controller
-        ref = get_reference_signal(input_signal, i, Np)
-        U = lti_mpc.update(ref, y_measured)
+        reference = get_reference_signal(input_signal, i, Np)
+        U = lti_mpc.update(reference, y_measured)
 
-        plotter.append_name(ref, "ref")
+        plotter.append_name(reference, "reference")
         plotter.append_name(U, "U")
         plotter.append_name(y_measured, "y_measured")
         plotter.append_name(X, "X")
 
-    plotter.assign("ref", position=(0, 0), column=0, row=0, x_sequence=time)
+    plotter.assign("reference", position=(0, 0),
+                   column=0, row=0, x_sequence=time)
     plotter.assign_all("y_measured", position=(0, 0), x_sequence=time)
     plotter.assign_all("X", position=(1, 0), x_sequence=time)
     plotter.assign_all("U", position=(2, 0), x_sequence=time)

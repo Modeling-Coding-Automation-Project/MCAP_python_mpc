@@ -107,7 +107,7 @@ def create_reference(
     curve_yaw_rate = math.pi / 5.0
     curve_timing = 2.0
 
-    yaw_ref = math.pi
+    yaw_reference = math.pi
 
     x_sequence = np.zeros((len(time), 1))
     y_sequence = np.zeros((len(time), 1))
@@ -124,15 +124,15 @@ def create_reference(
             r_sequence[i, 0] = 0.0
             V_sequence[i, 0] = vehicle_speed
 
-        elif time[i] > curve_timing and theta_sequence[i - 1, 0] < yaw_ref:
+        elif time[i] > curve_timing and theta_sequence[i - 1, 0] < yaw_reference:
             x_sequence[i, 0] = x_sequence[i - 1, 0] + \
                 vehicle_speed * delta_time * math.cos(theta_sequence[i - 1, 0])
             y_sequence[i, 0] = y_sequence[i - 1, 0] + \
                 vehicle_speed * delta_time * math.sin(theta_sequence[i - 1, 0])
             theta_sequence[i, 0] = theta_sequence[i - 1, 0] + \
                 curve_yaw_rate * delta_time
-            if theta_sequence[i, 0] > yaw_ref:
-                theta_sequence[i, 0] = yaw_ref
+            if theta_sequence[i, 0] > yaw_reference:
+                theta_sequence[i, 0] = yaw_reference
 
             r_sequence[i, 0] = curve_yaw_rate
             V_sequence[i, 0] = vehicle_speed
@@ -234,7 +234,7 @@ def main():
         y_measured = y_store[delay_index]
 
         # controller
-        ref = np.array([
+        reference = np.array([
             [x_sequence[i, 0]],
             [y_sequence[i, 0]],
             [theta_sequence[i, 0]],
@@ -242,41 +242,41 @@ def main():
             [V_sequence[i, 0]]
         ])
 
-        u_from_mpc = ada_mpc.update_manipulation(ref, y_measured)
+        u_from_mpc = ada_mpc.update_manipulation(reference, y_measured)
 
         plotter.append_name(x_true, "x_true")
-        plotter.append_name(ref, "ref")
+        plotter.append_name(reference, "reference")
         plotter.append_name(y_measured, "y_measured")
         plotter.append_name(u_from_mpc, "u")
 
     # plot
     plotter.assign("x_true", column=0, row=0, position=(0, 0),
                    x_sequence=time, label="px_true")
-    plotter.assign("ref", column=0, row=0, position=(0, 0),
-                   x_sequence=time, label="px_ref")
+    plotter.assign("reference", column=0, row=0, position=(0, 0),
+                   x_sequence=time, label="px_reference")
 
     plotter.assign("x_true", column=1, row=0, position=(1, 0),
                    x_sequence=time, label="py_true")
-    plotter.assign("ref", column=1, row=0, position=(1, 0),
-                   x_sequence=time, label="py_ref")
+    plotter.assign("reference", column=1, row=0, position=(1, 0),
+                   x_sequence=time, label="py_reference")
 
     plotter.assign("x_true", column=2, row=0, position=(2, 0),
                    x_sequence=time, label="theta_true")
-    plotter.assign("ref", column=2, row=0, position=(2, 0),
-                   x_sequence=time, label="theta_ref")
+    plotter.assign("reference", column=2, row=0, position=(2, 0),
+                   x_sequence=time, label="theta_reference")
 
     plotter.assign("x_true", column=3, row=0, position=(0, 1),
                    x_sequence=time, label="r_true")
-    plotter.assign("ref", column=3, row=0, position=(0, 1),
-                   x_sequence=time, label="r_ref")
+    plotter.assign("reference", column=3, row=0, position=(0, 1),
+                   x_sequence=time, label="r_reference")
 
     plotter.assign("x_true", column=4, row=0, position=(1, 1),
                    x_sequence=time, label="beta_true")
 
     plotter.assign("x_true", column=5, row=0, position=(2, 1),
                    x_sequence=time, label="V_true")
-    plotter.assign("ref", column=4, row=0, position=(2, 1),
-                   x_sequence=time, label="V_ref")
+    plotter.assign("reference", column=4, row=0, position=(2, 1),
+                   x_sequence=time, label="V_reference")
 
     plotter.assign("u", column=0, row=0, position=(0, 2),
                    x_sequence=time, label="delta")
