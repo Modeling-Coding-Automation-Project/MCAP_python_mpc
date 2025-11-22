@@ -37,22 +37,22 @@ USE_QR_DECOMPOSITION_FOR_SOLVER_FACTOR = True
 
 
 def create_reference_trajectory(
-        is_ref_trajectory: bool, Np: int,
+        is_reference_trajectory: bool, Np: int,
         reference_trajectory: np.ndarray
 ):
     """
     Creates a reference trajectory object for Model Predictive Control (MPC).
     Parameters:
-        is_ref_trajectory (bool): Flag indicating whether a reference trajectory is provided.
+        is_reference_trajectory (bool): Flag indicating whether a reference trajectory is provided.
         Np (int): Prediction horizon length.
         reference_trajectory (np.ndarray): The reference trajectory array.
             Should have either one column (single reference) or Np columns (reference for each step in the horizon).
     Returns:
         MPC_ReferenceTrajectory: An object representing the reference trajectory for the MPC controller.
     Raises:
-        ValueError: If is_ref_trajectory is True and reference_trajectory does not have either 1 or Np columns.
+        ValueError: If is_reference_trajectory is True and reference_trajectory does not have either 1 or Np columns.
     """
-    if is_ref_trajectory:
+    if is_reference_trajectory:
         if not ((reference_trajectory.shape[1] == Np) or
                 (reference_trajectory.shape[1] == 1)):
             raise ValueError(
@@ -223,7 +223,7 @@ class LTI_MPC_NoConstraints:
     def __init__(self, state_space: SymbolicStateSpace, Np: int, Nc: int,
                  Weight_U: np.ndarray, Weight_Y: np.ndarray,
                  Q_kf: np.ndarray = None, R_kf: np.ndarray = None,
-                 is_ref_trajectory=False):
+                 is_reference_trajectory=False):
         # Check compatibility
         if state_space.delta_time <= 0.0:
             raise ValueError("State space model must be discrete-time.")
@@ -281,7 +281,7 @@ class LTI_MPC_NoConstraints:
         self.Y_store = DelayedVectorObject(self.AUGMENTED_OUTPUT_SIZE,
                                            self.Number_of_Delay)
 
-        self.is_ref_trajectory = is_ref_trajectory
+        self.is_reference_trajectory = is_reference_trajectory
 
     def initialize_kalman_filter(
             self,
@@ -351,7 +351,7 @@ class LTI_MPC_NoConstraints:
 
     def create_reference_trajectory(self, reference_trajectory: np.ndarray):
         return create_reference_trajectory(
-            self.is_ref_trajectory, self.Np, reference_trajectory)
+            self.is_reference_trajectory, self.Np, reference_trajectory)
 
     def update_solver_factor(self, Phi: np.ndarray, Weight_U_Nc: np.ndarray):
         self.solver_factor = update_solver_factor(
@@ -416,13 +416,13 @@ class LTI_MPC(LTI_MPC_NoConstraints):
     def __init__(self, state_space: SymbolicStateSpace, Np: int, Nc: int,
                  Weight_U: np.ndarray, Weight_Y: np.ndarray,
                  Q_kf: np.ndarray = None, R_kf: np.ndarray = None,
-                 is_ref_trajectory: bool = False,
+                 is_reference_trajectory: bool = False,
                  delta_U_min: np.ndarray = None, delta_U_max: np.ndarray = None,
                  U_min: np.ndarray = None, U_max: np.ndarray = None,
                  Y_min: np.ndarray = None, Y_max: np.ndarray = None):
 
         super().__init__(state_space, Np, Nc, Weight_U, Weight_Y,
-                         Q_kf, R_kf, is_ref_trajectory)
+                         Q_kf, R_kf, is_reference_trajectory)
 
         delta_U_Nc = np.zeros((self.AUGMENTED_INPUT_SIZE * self.Nc, 1))
 
@@ -489,7 +489,7 @@ class LTV_MPC_NoConstraints:
                  Np: int, Nc: int,
                  Weight_U: np.ndarray, Weight_Y: np.ndarray,
                  Q_kf: np.ndarray = None, R_kf: np.ndarray = None,
-                 is_ref_trajectory: bool = False,
+                 is_reference_trajectory: bool = False,
                  caller_file_name: str = None):
 
         # inspect arguments
@@ -579,7 +579,7 @@ class LTV_MPC_NoConstraints:
         self.Y_store = DelayedVectorObject(self.AUGMENTED_OUTPUT_SIZE,
                                            self.Number_of_Delay)
 
-        self.is_ref_trajectory = is_ref_trajectory
+        self.is_reference_trajectory = is_reference_trajectory
 
     def initialize_kalman_filter(
             self,
@@ -680,7 +680,7 @@ class LTV_MPC_NoConstraints:
 
     def create_reference_trajectory(self, reference_trajectory: np.ndarray):
         return create_reference_trajectory(
-            self.is_ref_trajectory, self.Np, reference_trajectory)
+            self.is_reference_trajectory, self.Np, reference_trajectory)
 
     def update_solver_factor(self, Phi: np.ndarray, Weight_U_Nc: np.ndarray):
         self.solver_factor = update_solver_factor(
@@ -792,7 +792,7 @@ class LTV_MPC(LTV_MPC_NoConstraints):
                  parameters_struct, Np: int, Nc: int,
                  Weight_U: np.ndarray, Weight_Y: np.ndarray,
                  Q_kf: np.ndarray = None, R_kf: np.ndarray = None,
-                 is_ref_trajectory: bool = False,
+                 is_reference_trajectory: bool = False,
                  delta_U_min: np.ndarray = None, delta_U_max: np.ndarray = None,
                  U_min: np.ndarray = None, U_max: np.ndarray = None,
                  Y_min: np.ndarray = None, Y_max: np.ndarray = None):
@@ -815,7 +815,7 @@ class LTV_MPC(LTV_MPC_NoConstraints):
             0]
 
         super().__init__(state_space, parameters_struct, Np, Nc, Weight_U, Weight_Y,
-                         Q_kf, R_kf, is_ref_trajectory, caller_file_name)
+                         Q_kf, R_kf, is_reference_trajectory, caller_file_name)
 
         delta_U_Nc = np.zeros((self.AUGMENTED_INPUT_SIZE * self.Nc, 1))
 

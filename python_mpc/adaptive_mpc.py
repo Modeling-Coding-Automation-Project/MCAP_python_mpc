@@ -62,7 +62,7 @@ class AdaptiveMPC_NoConstraints:
                  Weight_U: np.ndarray, Weight_Y: np.ndarray,
                  Q_kf: np.ndarray = None, R_kf: np.ndarray = None,
                  Number_of_Delay: int = 0,
-                 is_ref_trajectory: bool = False,
+                 is_reference_trajectory: bool = False,
                  caller_file_name: str = None):
 
         # inspect arguments
@@ -187,7 +187,7 @@ class AdaptiveMPC_NoConstraints:
         self.Y_store = DelayedVectorObject(self.AUGMENTED_OUTPUT_SIZE,
                                            self.Number_of_Delay)
 
-        self.is_ref_trajectory = is_ref_trajectory
+        self.is_reference_trajectory = is_reference_trajectory
 
     def generate_function_file(
             self,
@@ -400,7 +400,7 @@ class AdaptiveMPC_NoConstraints:
             a single row vector or Np row vectors).
         """
 
-        if self.is_ref_trajectory:
+        if self.is_reference_trajectory:
             if not ((reference_trajectory.shape[1] == self.Np) or
                     (reference_trajectory.shape[1] == 1)):
                 raise ValueError(
@@ -650,7 +650,7 @@ class AdaptiveMPC(AdaptiveMPC_NoConstraints):
                  Weight_U: np.ndarray, Weight_Y: np.ndarray,
                  Q_kf: np.ndarray = None, R_kf: np.ndarray = None,
                  Number_of_Delay: int = 0,
-                 is_ref_trajectory: bool = False,
+                 is_reference_trajectory: bool = False,
                  caller_file_name: str = None,
                  delta_U_min: np.ndarray = None, delta_U_max: np.ndarray = None,
                  U_min: np.ndarray = None, U_max: np.ndarray = None,
@@ -683,7 +683,7 @@ class AdaptiveMPC(AdaptiveMPC_NoConstraints):
                          Weight_U=Weight_U, Weight_Y=Weight_Y,
                          Q_kf=Q_kf, R_kf=R_kf,
                          Number_of_Delay=Number_of_Delay,
-                         is_ref_trajectory=is_ref_trajectory,
+                         is_reference_trajectory=is_reference_trajectory,
                          caller_file_name=caller_file_name)
 
         delta_U_Nc = np.zeros((self.AUGMENTED_INPUT_SIZE * self.Nc, 1))
