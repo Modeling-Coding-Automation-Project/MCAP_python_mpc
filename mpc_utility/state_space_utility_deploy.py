@@ -12,9 +12,13 @@ enabling flexible initialization and runtime updates of system models
 and prediction matrices through dynamically written
 and imported Python modules.
 """
+from __future__ import annotations
+
 import os
 import sys
-sys.path.append(os.getcwd())
+from pathlib import Path
+
+sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 from dataclasses import dataclass, fields, make_dataclass
 import sympy as sp

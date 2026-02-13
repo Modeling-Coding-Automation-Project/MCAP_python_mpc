@@ -9,9 +9,14 @@ generates input and reference signals, simulates the closed-loop system with del
 and visualizes the results. It also provides functionality
 to export the MPC controller as C++ code for deployment.
 """
+from __future__ import annotations
+
 import os
 import sys
-sys.path.append(os.getcwd())
+from pathlib import Path
+
+sys.path.append(str(Path(__file__).resolve().parents[1]))
+sys.path.append(str(Path(__file__).resolve().parents[2]))
 
 import numpy as np
 

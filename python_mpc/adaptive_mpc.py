@@ -12,8 +12,13 @@ Key features include symbolic model deployment,
 embedded integrator support, and flexible weighting for control
 and output objectives.
 """
+from __future__ import annotations
+
 import os
 import sys
+from pathlib import Path
+
+sys.path.append(str(Path(__file__).resolve().parents[1]))
 sys.path.append(os.path.join(
     os.getcwd(), 'external_libraries', 'MCAP_python_optimization'))
 

@@ -5,9 +5,14 @@ This module simulates a nonlinear pendulum system using Model Predictive Control
 It defines the pendulum dynamics, sets up the MPC controller, and runs a simulation
 over a specified time horizon. The results are visualized using matplotlib.
 """
+from __future__ import annotations
+
 import os
 import sys
-sys.path.append(os.getcwd())
+from pathlib import Path
+
+sys.path.append(str(Path(__file__).resolve().parents[1]))
+sys.path.append(str(Path(__file__).resolve().parents[2]))
 
 import numpy as np
 import sympy as sp

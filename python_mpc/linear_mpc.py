@@ -10,8 +10,13 @@ supporting state estimation via a Kalman filter,
 reference trajectory tracking,
 and quadratic programming-based constraint handling.
 """
+from __future__ import annotations
+
 import os
 import sys
+from pathlib import Path
+
+sys.path.append(str(Path(__file__).resolve().parents[1]))
 sys.path.append(os.path.join(
     os.getcwd(), 'external_libraries', 'MCAP_python_optimization'))
 

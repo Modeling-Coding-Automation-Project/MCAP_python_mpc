@@ -11,9 +11,14 @@ yaw rate (r), and speed (V) while respecting steering (delta) and acceleration l
 The code also visualizes the results using a custom plotter,
 allowing analysis of the controller's performance over time.
 """
+from __future__ import annotations
+
 import os
 import sys
-sys.path.append(os.getcwd())
+from pathlib import Path
+
+sys.path.append(str(Path(__file__).resolve().parents[1]))
+sys.path.append(str(Path(__file__).resolve().parents[2]))
 
 import math
 import numpy as np

@@ -9,8 +9,13 @@ The NonlinearMPC_TwiceDifferentiable optimization is solved using a
 Sequential Quadratic Programming (SQP)
 method with an active-set strategy and preconditioned conjugate gradient solver.
 """
+from __future__ import annotations
+
 import os
 import sys
+from pathlib import Path
+
+sys.path.append(str(Path(__file__).resolve().parents[1]))
 sys.path.append(os.path.join(
     os.getcwd(), 'external_libraries', 'MCAP_python_optimization'))
 
