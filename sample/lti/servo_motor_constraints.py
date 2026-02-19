@@ -33,7 +33,7 @@ import control
 from mpc_utility.state_space_utility import SymbolicStateSpace
 from python_mpc.linear_mpc import LTI_MPC
 
-from sample.simulation_manager.visualize.simulation_plotter import SimulationPlotter
+from sample.simulation_manager.visualize.simulation_plotter_dash import SimulationPlotterDash
 from sample.simulation_manager.signal_edit.sampler import PulseGenerator
 
 
@@ -147,7 +147,7 @@ def main():
                   [0.0]])
     U = np.array([[0.0]])
 
-    plotter = SimulationPlotter()
+    plotter = SimulationPlotterDash()
 
     y_measured = Y
     y_store = [Y] * (Number_of_Delay + 1)
