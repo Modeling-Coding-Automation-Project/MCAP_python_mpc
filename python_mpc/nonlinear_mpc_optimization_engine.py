@@ -2,14 +2,18 @@
 File: nonlinear_mpc_optimization_engine.py
 
 NonlinearMPC_OptimizationEngine implements a nonlinear model predictive control
-(NMPC) algorithm using the PANOC/ALM optimization engine.
+(NMPC) algorithm using the ALM/PM (Augmented Lagrangian Method / Penalty Method)
+optimization engine, which internally uses PANOC as the inner solver.
 It utilizes symbolic computation for system dynamics and measurement equations,
 and employs an Extended Kalman Filter (EKF) for state estimation.
-The optimization is solved using:
-- PANOC (Proximal Averaged Newton-type method for Optimal Control)
-  for problems with input box constraints only.
-- ALM/PM (Augmented Lagrangian Method / Penalty Method) with PANOC inner solver
-  for problems with additional output constraints.
+
+The ALM/PM optimizer is used as the unified solver for both constrained and
+unconstrained problems:
+- When output constraints are present (n1 > 0), the full ALM outer loop is
+  activated with Lagrange multiplier updates and penalty parameter adjustment.
+- When no output constraints exist (n1 = 0), the ALM outer loop reduces to a
+  single PANOC solve with no augmentation overhead, since the augmented cost
+  psi(u; xi) = f(u) and the exit criterion is immediately satisfied.
 
 Unlike NonlinearMPC_TwiceDifferentiable, this implementation does not require
 second-order derivative (Hessian) computations, as PANOC uses L-BFGS
@@ -37,7 +41,6 @@ from external_libraries.MCAP_python_control.python_control.kalman_filter import 
 from external_libraries.MCAP_python_optimization.optimization_utility.optimization_engine_matrix_utility import OptimizationEngine_CostMatrices
 from external_libraries.MCAP_python_optimization.python_optimization.panoc import (
     PANOC_Cache,
-    PANOC_Optimizer,
 )
 from external_libraries.MCAP_python_optimization.python_optimization.alm_pm_optimizer import (
     ALM_Factory,
@@ -95,11 +98,13 @@ class SolverConfiguration:
 class NonlinearMPC_OptimizationEngine:
     """
     NonlinearMPC_OptimizationEngine implements a nonlinear model predictive control
-    (NMPC) algorithm using the PANOC/ALM optimization engine.
+    (NMPC) algorithm using the ALM/PM optimization engine (which internally uses
+    PANOC as the inner solver).
     It utilizes symbolic computation for system dynamics and measurement equations,
     and employs an Extended Kalman Filter (EKF) for state estimation.
-    The optimization is solved using PANOC for input-constrained problems,
-    or ALM/PM with PANOC inner solver when output constraints are present.
+    The ALM/PM optimizer is used as the unified solver regardless of whether output
+    constraints are present. When no output constraints exist, ALM reduces to a
+    single PANOC solve with no augmentation overhead.
 
     Args:
         delta_time (float): Sampling time interval of the discrete-time system.
@@ -257,21 +262,32 @@ class NonlinearMPC_OptimizationEngine:
         # Problem size for PANOC: nu * Np
         problem_size = self.INPUT_SIZE * self.Np
 
-        # Create PANOC cache
+        # Create PANOC cache (inner solver for ALM)
         self._panoc_cache = PANOC_Cache(
             problem_size=problem_size,
             tolerance=PANOC_TOLERANCE_DEFAULT,
             lbfgs_memory=PANOC_LBFGS_MEMORY_DEFAULT,
         )
 
+        # Always use ALM_PM_Optimizer as the unified solver.
+        # When output constraints are present, n1 > 0 activates the full
+        # ALM outer loop with Lagrange multiplier updates.
+        # When no output constraints, n1 = 0 reduces ALM to a single
+        # PANOC solve (psi = f, d_psi = df, exit after 1 outer iteration).
         if self._has_output_constraints:
-            # ALM configuration for output constraint handling
             n1 = self.OUTPUT_SIZE * (self.Np + 1)
-            self._alm_n1 = n1
+        else:
+            n1 = 0
 
-            # ALM cache (wraps PANOC cache)
-            self._alm_cache = ALM_Cache(self._panoc_cache, n1=n1)
+        self._alm_n1 = n1
 
+        # ALM cache (wraps PANOC cache)
+        self._alm_cache = ALM_Cache(self._panoc_cache, n1=n1)
+
+        U_min_flat = self.cost_matrices.U_min_matrix.reshape((-1, 1))
+        U_max_flat = self.cost_matrices.U_max_matrix.reshape((-1, 1))
+
+        if self._has_output_constraints:
             # Output constraint box projection: [Y_min, Y_max]
             Y_min_flat = self.cost_matrices.Y_min_matrix.reshape((-1, 1))
             Y_max_flat = self.cost_matrices.Y_max_matrix.reshape((-1, 1))
@@ -293,8 +309,6 @@ class NonlinearMPC_OptimizationEngine:
             )
 
             # ALM problem definition
-            U_min_flat = self.cost_matrices.U_min_matrix.reshape((-1, 1))
-            U_max_flat = self.cost_matrices.U_max_matrix.reshape((-1, 1))
             self._alm_problem = ALM_Problem(
                 parametric_cost=self._alm_factory.psi,
                 parametric_gradient=self._alm_factory.d_psi,
@@ -304,6 +318,22 @@ class NonlinearMPC_OptimizationEngine:
                 set_c_project=self._set_c_project,
                 set_y_project=self._set_y_project,
                 n1=n1,
+            )
+        else:
+            # No output constraints: ALM_Factory wraps raw cost/gradient directly.
+            # With n1=0, psi(u; xi) = f(u) and d_psi(u; xi) = df(u).
+            self._alm_factory = ALM_Factory(
+                f=self.cost_matrices.compute_cost,
+                df=self.cost_matrices.compute_gradient,
+                n1=0,
+            )
+
+            self._alm_problem = ALM_Problem(
+                parametric_cost=self._alm_factory.psi,
+                parametric_gradient=self._alm_factory.d_psi,
+                u_min=U_min_flat,
+                u_max=U_max_flat,
+                n1=0,
             )
 
     def generate_cost_matrices(
@@ -520,8 +550,8 @@ class NonlinearMPC_OptimizationEngine:
         3. Compensates the state estimate for any delay between state (X)
           and measurement (Y).
         4. Sets the reference trajectory for the MPC optimization.
-        5. Solves the MPC optimization problem using PANOC (or ALM+PANOC
-          for output-constrained problems) to update the control horizon.
+        5. Solves the MPC optimization problem using ALM/PM (which uses PANOC
+          as the inner solver) to update the control horizon.
         6. Calculates and returns the latest control input after optimization.
 
         Args:
@@ -556,20 +586,22 @@ class NonlinearMPC_OptimizationEngine:
                 initial_inner_tolerance=ALM_INITIAL_INNER_TOLERANCE_DEFAULT,
                 initial_penalty=ALM_INITIAL_PENALTY_DEFAULT,
             )
-            status = alm_optimizer.solve(u_flat)
-            self.solver_configuration._last_iteration_count = status.num_inner_iterations
         else:
-            self._panoc_cache.reset()
-            panoc_optimizer = PANOC_Optimizer(
-                cost_func=self.cost_matrices.compute_cost,
-                gradient_func=self.cost_matrices.compute_gradient,
-                cache=self._panoc_cache,
-                u_min=self.cost_matrices.U_min_matrix.reshape((-1, 1)),
-                u_max=self.cost_matrices.U_max_matrix.reshape((-1, 1)),
-                max_iteration=self.solver_configuration._max_iteration,
+            # No output constraints: ALM reduces to a single PANOC solve.
+            # Setting initial_inner_tolerance = epsilon_tolerance ensures
+            # the ALM exit criterion is met after one outer iteration.
+            alm_optimizer = ALM_PM_Optimizer(
+                alm_cache=self._alm_cache,
+                alm_problem=self._alm_problem,
+                max_outer_iterations=1,
+                max_inner_iterations=self.solver_configuration._max_iteration,
+                epsilon_tolerance=PANOC_TOLERANCE_DEFAULT,
+                delta_tolerance=ALM_DELTA_TOLERANCE_DEFAULT,
+                initial_inner_tolerance=PANOC_TOLERANCE_DEFAULT,
             )
-            status = panoc_optimizer.solve(u_flat)
-            self.solver_configuration._last_iteration_count = status.number_of_iteration
+
+        status = alm_optimizer.solve(u_flat)
+        self.solver_configuration._last_iteration_count = status.num_inner_iterations
 
         self.U_horizon = u_flat.reshape((self.INPUT_SIZE, self.Np)).copy()
 
