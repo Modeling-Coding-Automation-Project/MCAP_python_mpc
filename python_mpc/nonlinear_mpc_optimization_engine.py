@@ -19,3 +19,7 @@ from dataclasses import is_dataclass
 from python_mpc.mpc_common import initialize_kalman_filter_with_EKF
 
 from external_libraries.MCAP_python_control.python_control.kalman_filter import DelayedVectorObject
+
+
+class NonlinearMPC_OptimizationEngine:
+    pass
