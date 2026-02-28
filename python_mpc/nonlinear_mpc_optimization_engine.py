@@ -61,6 +61,8 @@ ALM_DELTA_TOLERANCE_DEFAULT = 1e-3
 ALM_INITIAL_INNER_TOLERANCE_DEFAULT = 1e-2
 ALM_INITIAL_PENALTY_DEFAULT = 10.0
 
+BALL_PROJECTION_RADIUS_DEFAULT = 1e12
+
 
 class SolverConfiguration:
     """
@@ -296,7 +298,7 @@ class NonlinearMPC_OptimizationEngine:
 
             # Lagrange multiplier projection (ball of large radius)
             self._set_y_project = BallProjectionOperator(
-                center=None, radius=1e12).project
+                center=None, radius=BALL_PROJECTION_RADIUS_DEFAULT).project
 
             # ALM factory: constructs augmented cost psi(u; xi) and its gradient
             self._alm_factory = ALM_Factory(
