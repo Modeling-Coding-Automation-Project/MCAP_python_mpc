@@ -59,7 +59,7 @@ ALM_INITIAL_INNER_TOLERANCE_DEFAULT = 1e-2
 ALM_INITIAL_PENALTY_DEFAULT = 10.0
 
 
-class _SolverConfig:
+class SolverConfiguration:
     """
     Configuration wrapper for the PANOC/ALM optimization engine solver.
 
@@ -248,7 +248,8 @@ class NonlinearMPC_OptimizationEngine:
             )
 
         # Setup solver configuration
-        self.solver = _SolverConfig(NMPC_SOLVER_MAX_ITERATION_DEFAULT)
+        self.solver_configuration = SolverConfiguration(
+            NMPC_SOLVER_MAX_ITERATION_DEFAULT)
 
         # Determine if output constraints are present
         self._has_output_constraints = (Y_min is not None or Y_max is not None)
@@ -375,7 +376,7 @@ class NonlinearMPC_OptimizationEngine:
         Returns:
             int: The number of iterations performed by the solver in the current step.
         """
-        return self.solver.get_solver_step_iterated_number()
+        return self.solver_configuration.get_solver_step_iterated_number()
 
     def set_solver_max_iteration(
             self,
@@ -391,7 +392,7 @@ class NonlinearMPC_OptimizationEngine:
         -------
         None
         """
-        self.solver.set_solver_max_iteration(max_iteration)
+        self.solver_configuration.set_solver_max_iteration(max_iteration)
 
     def set_reference_trajectory(
             self,
@@ -439,7 +440,7 @@ class NonlinearMPC_OptimizationEngine:
                     self.cost_matrices.reference_trajectory[i, j] = \
                         reference_trajectory[i, 0]
 
-    def calculate_this_U(self, U_horizon):
+    def calculate_this_U(self, U_horizon: np.ndarray) -> np.ndarray:
         """
         Extracts and reshapes the first column of the input horizon matrix.
 
@@ -457,7 +458,7 @@ class NonlinearMPC_OptimizationEngine:
         """
         return U_horizon[:, 0].reshape((self.INPUT_SIZE, 1))
 
-    def compensate_X_Y_delay(self, X: np.ndarray, Y: np.ndarray):
+    def compensate_X_Y_delay(self, X: np.ndarray, Y: np.ndarray) -> np.ndarray:
         """
         Compensates for measurement delay in the X and Y signals
         using a Kalman filter and updates internal state.
@@ -540,28 +541,24 @@ class NonlinearMPC_OptimizationEngine:
 
         self.set_reference_trajectory(reference)
 
-        # Set X_initial for the cost computation
         self.cost_matrices.X_initial = X_compensated
 
-        # Prepare flat control vector (flatten creates a copy)
         u_flat = self.U_horizon.flatten()
 
         if self._has_output_constraints:
-            # Solve using ALM/PM with PANOC inner solver
             alm_optimizer = ALM_PM_Optimizer(
                 alm_cache=self._alm_cache,
                 alm_problem=self._alm_problem,
                 max_outer_iterations=ALM_MAX_OUTER_ITERATIONS_DEFAULT,
-                max_inner_iterations=self.solver._max_iteration,
+                max_inner_iterations=self.solver_configuration._max_iteration,
                 epsilon_tolerance=ALM_EPSILON_TOLERANCE_DEFAULT,
                 delta_tolerance=ALM_DELTA_TOLERANCE_DEFAULT,
                 initial_inner_tolerance=ALM_INITIAL_INNER_TOLERANCE_DEFAULT,
                 initial_penalty=ALM_INITIAL_PENALTY_DEFAULT,
             )
             status = alm_optimizer.solve(u_flat)
-            self.solver._last_iteration_count = status.num_inner_iterations
+            self.solver_configuration._last_iteration_count = status.num_inner_iterations
         else:
-            # Solve using PANOC directly (input box constraints only)
             self._panoc_cache.reset()
             panoc_optimizer = PANOC_Optimizer(
                 cost_func=self.cost_matrices.compute_cost,
@@ -569,10 +566,10 @@ class NonlinearMPC_OptimizationEngine:
                 cache=self._panoc_cache,
                 u_min=self.cost_matrices.U_min_matrix.flatten(),
                 u_max=self.cost_matrices.U_max_matrix.flatten(),
-                max_iteration=self.solver._max_iteration,
+                max_iteration=self.solver_configuration._max_iteration,
             )
             status = panoc_optimizer.solve(u_flat)
-            self.solver._last_iteration_count = status.number_of_iteration
+            self.solver_configuration._last_iteration_count = status.number_of_iteration
 
         self.U_horizon = u_flat.reshape((self.INPUT_SIZE, self.Np)).copy()
 
