@@ -273,8 +273,8 @@ class NonlinearMPC_OptimizationEngine:
             self._alm_cache = ALM_Cache(self._panoc_cache, n1=n1)
 
             # Output constraint box projection: [Y_min, Y_max]
-            Y_min_flat = self.cost_matrices.Y_min_matrix.flatten()
-            Y_max_flat = self.cost_matrices.Y_max_matrix.flatten()
+            Y_min_flat = self.cost_matrices.Y_min_matrix.reshape((-1, 1))
+            Y_max_flat = self.cost_matrices.Y_max_matrix.reshape((-1, 1))
             self._set_c_project = BoxProjectionOperator(
                 lower=Y_min_flat, upper=Y_max_flat).project
 
@@ -293,8 +293,8 @@ class NonlinearMPC_OptimizationEngine:
             )
 
             # ALM problem definition
-            U_min_flat = self.cost_matrices.U_min_matrix.flatten()
-            U_max_flat = self.cost_matrices.U_max_matrix.flatten()
+            U_min_flat = self.cost_matrices.U_min_matrix.reshape((-1, 1))
+            U_max_flat = self.cost_matrices.U_max_matrix.reshape((-1, 1))
             self._alm_problem = ALM_Problem(
                 parametric_cost=self._alm_factory.psi,
                 parametric_gradient=self._alm_factory.d_psi,
@@ -543,7 +543,7 @@ class NonlinearMPC_OptimizationEngine:
 
         self.cost_matrices.X_initial = X_compensated
 
-        u_flat = self.U_horizon.flatten()
+        u_flat = self.U_horizon.reshape((-1, 1))
 
         if self._has_output_constraints:
             alm_optimizer = ALM_PM_Optimizer(
@@ -564,8 +564,8 @@ class NonlinearMPC_OptimizationEngine:
                 cost_func=self.cost_matrices.compute_cost,
                 gradient_func=self.cost_matrices.compute_gradient,
                 cache=self._panoc_cache,
-                u_min=self.cost_matrices.U_min_matrix.flatten(),
-                u_max=self.cost_matrices.U_max_matrix.flatten(),
+                u_min=self.cost_matrices.U_min_matrix.reshape((-1, 1)),
+                u_max=self.cost_matrices.U_max_matrix.reshape((-1, 1)),
                 max_iteration=self.solver_configuration._max_iteration,
             )
             status = panoc_optimizer.solve(u_flat)
