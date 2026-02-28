@@ -338,6 +338,17 @@ class NonlinearMPC_OptimizationEngine:
                 n1=0,
             )
 
+        self._alm_optimizer = ALM_PM_Optimizer(
+            alm_cache=self._alm_cache,
+            alm_problem=self._alm_problem,
+            max_outer_iterations=ALM_MAX_OUTER_ITERATIONS_DEFAULT,
+            max_inner_iterations=self.solver_configuration._max_iteration,
+            epsilon_tolerance=ALM_EPSILON_TOLERANCE_DEFAULT,
+            delta_tolerance=ALM_DELTA_TOLERANCE_DEFAULT,
+            initial_inner_tolerance=ALM_INITIAL_INNER_TOLERANCE_DEFAULT,
+            initial_penalty=ALM_INITIAL_PENALTY_DEFAULT,
+        )
+
     def generate_cost_matrices(
             self,
             X_symbolic: sp.Matrix,
@@ -577,18 +588,13 @@ class NonlinearMPC_OptimizationEngine:
 
         u_flat = self.U_horizon.reshape((-1, 1))
 
-        alm_optimizer = ALM_PM_Optimizer(
-            alm_cache=self._alm_cache,
-            alm_problem=self._alm_problem,
-            max_outer_iterations=ALM_MAX_OUTER_ITERATIONS_DEFAULT,
-            max_inner_iterations=self.solver_configuration._max_iteration,
-            epsilon_tolerance=ALM_EPSILON_TOLERANCE_DEFAULT,
-            delta_tolerance=ALM_DELTA_TOLERANCE_DEFAULT,
-            initial_inner_tolerance=ALM_INITIAL_INNER_TOLERANCE_DEFAULT,
-            initial_penalty=ALM_INITIAL_PENALTY_DEFAULT,
-        )
+        self._alm_optimizer.max_inner_iterations = \
+            self.solver_configuration._max_iteration
 
-        status = alm_optimizer.solve(u_flat)
+        if self._alm_cache.xi is not None:
+            self._alm_cache.xi[0, 0] = ALM_INITIAL_PENALTY_DEFAULT
+
+        status = self._alm_optimizer.solve(u_flat)
         self.solver_configuration._last_iteration_count = status.num_inner_iterations
 
         self.U_horizon = u_flat.reshape((self.INPUT_SIZE, self.Np)).copy()
