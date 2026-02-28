@@ -1,5 +1,5 @@
 """
-File: nonlinear_mpc.py
+File: nonlinear_mpc_twice_differentiable.py
 
 NonlinearMPC_TwiceDifferentiable implements a nonlinear model predictive control
 (NMPC) algorithm for twice-differentiable systems.
