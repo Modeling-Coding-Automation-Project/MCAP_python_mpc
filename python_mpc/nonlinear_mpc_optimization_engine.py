@@ -12,6 +12,7 @@ sys.path.append(str(Path(__file__).resolve().parents[1]))
 sys.path.append(os.path.join(
     os.getcwd(), 'external_libraries', 'MCAP_python_optimization'))
 
+import inspect
 import numpy as np
 import sympy as sp
 from dataclasses import is_dataclass
