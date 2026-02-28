@@ -105,7 +105,7 @@ def main():
         Number_of_Delay=Number_of_Delay,
     )
 
-    nmpc.solver.set_solver_max_iteration(10)
+    nmpc.solver_configuration.set_solver_max_iteration(10)
 
     x_true = X_initial
     u = np.array([[0.0]])
@@ -136,7 +136,7 @@ def main():
 
         u_from_mpc = nmpc.update_manipulation(reference, y_measured)
 
-        solver_iteration = nmpc.get_solver_step_iterated_number()
+        solver_iteration = nmpc.solver_configuration.get_solver_step_iterated_number()
 
         plotter.append_name(x_true, "x_true")
         plotter.append_name(reference, "reference")
