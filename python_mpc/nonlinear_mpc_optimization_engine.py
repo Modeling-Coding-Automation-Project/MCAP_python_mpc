@@ -575,30 +575,16 @@ class NonlinearMPC_OptimizationEngine:
 
         u_flat = self.U_horizon.reshape((-1, 1))
 
-        if self._has_output_constraints:
-            alm_optimizer = ALM_PM_Optimizer(
-                alm_cache=self._alm_cache,
-                alm_problem=self._alm_problem,
-                max_outer_iterations=ALM_MAX_OUTER_ITERATIONS_DEFAULT,
-                max_inner_iterations=self.solver_configuration._max_iteration,
-                epsilon_tolerance=ALM_EPSILON_TOLERANCE_DEFAULT,
-                delta_tolerance=ALM_DELTA_TOLERANCE_DEFAULT,
-                initial_inner_tolerance=ALM_INITIAL_INNER_TOLERANCE_DEFAULT,
-                initial_penalty=ALM_INITIAL_PENALTY_DEFAULT,
-            )
-        else:
-            # No output constraints: ALM reduces to a single PANOC solve.
-            # Setting initial_inner_tolerance = epsilon_tolerance ensures
-            # the ALM exit criterion is met after one outer iteration.
-            alm_optimizer = ALM_PM_Optimizer(
-                alm_cache=self._alm_cache,
-                alm_problem=self._alm_problem,
-                max_outer_iterations=1,
-                max_inner_iterations=self.solver_configuration._max_iteration,
-                epsilon_tolerance=PANOC_TOLERANCE_DEFAULT,
-                delta_tolerance=ALM_DELTA_TOLERANCE_DEFAULT,
-                initial_inner_tolerance=PANOC_TOLERANCE_DEFAULT,
-            )
+        alm_optimizer = ALM_PM_Optimizer(
+            alm_cache=self._alm_cache,
+            alm_problem=self._alm_problem,
+            max_outer_iterations=ALM_MAX_OUTER_ITERATIONS_DEFAULT,
+            max_inner_iterations=self.solver_configuration._max_iteration,
+            epsilon_tolerance=ALM_EPSILON_TOLERANCE_DEFAULT,
+            delta_tolerance=ALM_DELTA_TOLERANCE_DEFAULT,
+            initial_inner_tolerance=ALM_INITIAL_INNER_TOLERANCE_DEFAULT,
+            initial_penalty=ALM_INITIAL_PENALTY_DEFAULT,
+        )
 
         status = alm_optimizer.solve(u_flat)
         self.solver_configuration._last_iteration_count = status.num_inner_iterations
