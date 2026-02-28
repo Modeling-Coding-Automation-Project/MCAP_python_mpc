@@ -105,7 +105,10 @@ def main():
         Number_of_Delay=Number_of_Delay,
     )
 
-    nmpc.solver_configuration.set_solver_max_iteration(10)
+    nmpc.solver.set_solver_max_iteration(
+        outer_max_iterations=10,
+        inner_max_iterations=10
+    )
 
     x_true = X_initial
     u = np.array([[0.0]])
@@ -136,13 +139,15 @@ def main():
 
         u_from_mpc = nmpc.update_manipulation(reference, y_measured)
 
-        solver_iteration = nmpc.solver_configuration.get_solver_step_iterated_number()
+        outer_solver_iteration, inner_solver_iteration = \
+            nmpc.solver.get_solver_step_iterated_number()
 
         plotter.append_name(x_true, "x_true")
         plotter.append_name(reference, "reference")
         plotter.append_name(y_measured, "y_measured")
         plotter.append_name(u_from_mpc, "u")
-        plotter.append_name(solver_iteration, "solver_iteration")
+        plotter.append_name(outer_solver_iteration, "outer_solver_iteration")
+        plotter.append_name(inner_solver_iteration, "inner_solver_iteration")
 
     # plot
     plotter.assign("y_measured", column=0, row=0, position=(0, 0),
@@ -157,8 +162,10 @@ def main():
 
     plotter.assign("u", column=0, row=0, position=(0, 1),
                    x_sequence=time, label="u")
-    plotter.assign("solver_iteration", column=0, row=0, position=(1, 1),
-                   x_sequence=time, label="solver_iteration")
+    plotter.assign("outer_solver_iteration", column=0, row=0, position=(1, 1),
+                   x_sequence=time, label="outer_solver_iteration")
+    plotter.assign("inner_solver_iteration", column=0, row=0, position=(1, 1),
+                   x_sequence=time, label="inner_solver_iteration")
 
     plotter.plot()
 

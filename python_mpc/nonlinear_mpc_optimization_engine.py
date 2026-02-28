@@ -33,6 +33,7 @@ import inspect
 import numpy as np
 import sympy as sp
 from dataclasses import is_dataclass
+from typing import Optional
 
 from python_mpc.mpc_common import initialize_kalman_filter_with_EKF
 
@@ -43,6 +44,7 @@ from external_libraries.MCAP_python_optimization.python_optimization.panoc impor
     PANOC_Cache,
 )
 from external_libraries.MCAP_python_optimization.python_optimization.alm_pm_optimizer import (
+    ALM_SolverStatus,
     ALM_Factory,
     ALM_Problem,
     ALM_Cache,
@@ -338,7 +340,7 @@ class NonlinearMPC_OptimizationEngine:
                 n1=0,
             )
 
-        self._alm_optimizer = ALM_PM_Optimizer(
+        self.solver = ALM_PM_Optimizer(
             alm_cache=self._alm_cache,
             alm_problem=self._alm_problem,
             max_outer_iterations=ALM_MAX_OUTER_ITERATIONS_DEFAULT,
@@ -348,6 +350,8 @@ class NonlinearMPC_OptimizationEngine:
             initial_inner_tolerance=ALM_INITIAL_INNER_TOLERANCE_DEFAULT,
             initial_penalty=ALM_INITIAL_PENALTY_DEFAULT,
         )
+
+        self.solver_status: Optional[ALM_SolverStatus] = None
 
     def generate_cost_matrices(
             self,
@@ -588,14 +592,10 @@ class NonlinearMPC_OptimizationEngine:
 
         u_flat = self.U_horizon.reshape((-1, 1))
 
-        self._alm_optimizer.max_inner_iterations = \
-            self.solver_configuration._max_iteration
-
         if self._alm_cache.xi is not None:
             self._alm_cache.xi[0, 0] = ALM_INITIAL_PENALTY_DEFAULT
 
-        status = self._alm_optimizer.solve(u_flat)
-        self.solver_configuration._last_iteration_count = status.num_inner_iterations
+        self.solver.solve(u_flat)
 
         self.U_horizon = u_flat.reshape((self.INPUT_SIZE, self.Np)).copy()
 
