@@ -267,7 +267,7 @@ class NonlinearMPC_OptimizationEngine:
         problem_size = self.INPUT_SIZE * self.Np
 
         # Create PANOC cache (inner solver for ALM)
-        self._panoc_cache = PANOC_Cache(
+        panoc_cache = PANOC_Cache(
             problem_size=problem_size,
             tolerance=PANOC_TOLERANCE_DEFAULT,
             lbfgs_memory=PANOC_LBFGS_MEMORY_DEFAULT,
@@ -286,7 +286,7 @@ class NonlinearMPC_OptimizationEngine:
         self._alm_n1 = n1
 
         # ALM cache (wraps PANOC cache)
-        self._alm_cache = ALM_Cache(self._panoc_cache, n1=n1)
+        alm_cache = ALM_Cache(panoc_cache, n1=n1)
 
         U_min_flat = self.cost_matrices.U_min_matrix.reshape((-1, 1))
         U_max_flat = self.cost_matrices.U_max_matrix.reshape((-1, 1))
@@ -295,54 +295,54 @@ class NonlinearMPC_OptimizationEngine:
             # Output constraint box projection: [Y_min, Y_max]
             Y_min_flat = self.cost_matrices.Y_min_matrix.reshape((-1, 1))
             Y_max_flat = self.cost_matrices.Y_max_matrix.reshape((-1, 1))
-            self._set_c_project = BoxProjectionOperator(
+            set_c_project = BoxProjectionOperator(
                 lower=Y_min_flat, upper=Y_max_flat).project
 
             # Lagrange multiplier projection (ball of large radius)
-            self._set_y_project = BallProjectionOperator(
+            set_y_project = BallProjectionOperator(
                 center=None, radius=BALL_PROJECTION_RADIUS_DEFAULT).project
 
             # ALM factory: constructs augmented cost psi(u; xi) and its gradient
-            self._alm_factory = ALM_Factory(
+            alm_factory = ALM_Factory(
                 f=self.cost_matrices.compute_cost,
                 df=self.cost_matrices.compute_gradient,
                 mapping_f1=self.cost_matrices.compute_output_mapping,
                 jacobian_f1_trans=self.cost_matrices.compute_output_jacobian_trans,
-                set_c_project=self._set_c_project,
+                set_c_project=set_c_project,
                 n1=n1,
             )
 
             # ALM problem definition
-            self._alm_problem = ALM_Problem(
-                parametric_cost=self._alm_factory.psi,
-                parametric_gradient=self._alm_factory.d_psi,
+            alm_problem = ALM_Problem(
+                parametric_cost=alm_factory.psi,
+                parametric_gradient=alm_factory.d_psi,
                 u_min=U_min_flat,
                 u_max=U_max_flat,
                 mapping_f1=self.cost_matrices.compute_output_mapping,
-                set_c_project=self._set_c_project,
-                set_y_project=self._set_y_project,
+                set_c_project=set_c_project,
+                set_y_project=set_y_project,
                 n1=n1,
             )
         else:
             # No output constraints: ALM_Factory wraps raw cost/gradient directly.
             # With n1=0, psi(u; xi) = f(u) and d_psi(u; xi) = df(u).
-            self._alm_factory = ALM_Factory(
+            alm_factory = ALM_Factory(
                 f=self.cost_matrices.compute_cost,
                 df=self.cost_matrices.compute_gradient,
                 n1=0,
             )
 
-            self._alm_problem = ALM_Problem(
-                parametric_cost=self._alm_factory.psi,
-                parametric_gradient=self._alm_factory.d_psi,
+            alm_problem = ALM_Problem(
+                parametric_cost=alm_factory.psi,
+                parametric_gradient=alm_factory.d_psi,
                 u_min=U_min_flat,
                 u_max=U_max_flat,
                 n1=0,
             )
 
         self.solver = ALM_PM_Optimizer(
-            alm_cache=self._alm_cache,
-            alm_problem=self._alm_problem,
+            alm_cache=alm_cache,
+            alm_problem=alm_problem,
             max_outer_iterations=ALM_MAX_OUTER_ITERATIONS_DEFAULT,
             max_inner_iterations=self.solver_configuration._max_iteration,
             epsilon_tolerance=ALM_EPSILON_TOLERANCE_DEFAULT,
@@ -591,9 +591,6 @@ class NonlinearMPC_OptimizationEngine:
         self.cost_matrices.X_initial = X_compensated
 
         u_flat = self.U_horizon.reshape((-1, 1))
-
-        if self._alm_cache.xi is not None:
-            self._alm_cache.xi[0, 0] = ALM_INITIAL_PENALTY_DEFAULT
 
         self.solver.solve(u_flat)
 
