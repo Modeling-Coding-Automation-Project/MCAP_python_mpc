@@ -432,23 +432,20 @@ class NonlinearMPC_OptimizationEngine:
         Returns:
             int: The number of iterations performed by the solver in the current step.
         """
-        return self.solver_configuration.get_solver_step_iterated_number()
+        return self.solver.get_solver_step_iterated_number()
 
     def set_solver_max_iteration(
             self,
-            max_iteration: int
+            outer_max_iterations: int,
+            inner_max_iterations: int
     ):
         """
         Set the maximum number of iterations for the solver.
-        Parameters
-        ----------
-        max_iteration : int
-            The maximum number of iterations the solver is allowed to perform.
-        Returns
-        -------
-        None
         """
-        self.solver_configuration.set_solver_max_iteration(max_iteration)
+        self.solver.set_solver_max_iteration(
+            outer_max_iterations=outer_max_iterations,
+            inner_max_iterations=inner_max_iterations
+        )
 
     def set_reference_trajectory(
             self,
