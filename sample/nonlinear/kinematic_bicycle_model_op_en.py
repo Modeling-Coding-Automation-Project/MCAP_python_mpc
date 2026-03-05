@@ -138,7 +138,7 @@ def main():
 
     nmpc.solver.set_solver_max_iteration(
         outer_max_iterations=10,
-        inner_max_iterations=5
+        inner_max_iterations=15
     )
 
     plotter = SimulationPlotterDash()

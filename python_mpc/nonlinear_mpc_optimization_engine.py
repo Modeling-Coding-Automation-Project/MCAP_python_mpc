@@ -340,6 +340,15 @@ class NonlinearMPC_OptimizationEngine:
                 n1=0,
             )
 
+        # When no output constraints exist (n1 == 0), set initial_inner_tolerance
+        # equal to epsilon_tolerance so the ALM outer loop exits after 1 iteration.
+        # Otherwise, the tolerance ramp-down from initial_inner_tolerance to
+        # epsilon_tolerance unnecessarily drives the outer iteration count.
+        if self._has_output_constraints:
+            initial_inner_tolerance = ALM_INITIAL_INNER_TOLERANCE_DEFAULT
+        else:
+            initial_inner_tolerance = ALM_EPSILON_TOLERANCE_DEFAULT
+
         self.solver = ALM_PM_Optimizer(
             alm_cache=alm_cache,
             alm_problem=alm_problem,
@@ -347,7 +356,7 @@ class NonlinearMPC_OptimizationEngine:
             max_inner_iterations=self.solver_configuration._max_iteration,
             epsilon_tolerance=ALM_EPSILON_TOLERANCE_DEFAULT,
             delta_tolerance=ALM_DELTA_TOLERANCE_DEFAULT,
-            initial_inner_tolerance=ALM_INITIAL_INNER_TOLERANCE_DEFAULT,
+            initial_inner_tolerance=initial_inner_tolerance,
             initial_penalty=ALM_INITIAL_PENALTY_DEFAULT,
         )
 
