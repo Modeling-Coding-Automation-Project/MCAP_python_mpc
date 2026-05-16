@@ -276,25 +276,25 @@ def main():
         plotter.append_name(outer_solver_iteration, "outer_solver_iteration")
         plotter.append_name(inner_solver_iteration, "inner_solver_iteration")
 
-    plotter.assign("px_reference", column=0, row=0, position=(0, 0),
+    plotter.assign("px_reference", row=0, column=0, position=(0, 0),
                    x_sequence=times, label="px_reference")
-    plotter.assign("px_measured", column=0, row=0, position=(0, 0),
+    plotter.assign("px_measured", row=0, column=0, position=(0, 0),
                    x_sequence=times, label="px_measured")
-    plotter.assign("py_reference", column=0, row=0, position=(1, 0),
+    plotter.assign("py_reference", row=0, column=0, position=(1, 0),
                    x_sequence=times, label="py_reference")
-    plotter.assign("py_measured", column=0, row=0, position=(1, 0),
+    plotter.assign("py_measured", row=0, column=0, position=(1, 0),
                    x_sequence=times, label="py_measured")
-    plotter.assign("yaw_reference", column=0, row=0, position=(2, 0),
+    plotter.assign("yaw_reference", row=0, column=0, position=(2, 0),
                    x_sequence=times, label="yaw_reference")
-    plotter.assign("yaw_measured", column=0, row=0, position=(2, 0),
+    plotter.assign("yaw_measured", row=0, column=0, position=(2, 0),
                    x_sequence=times, label="yaw_measured")
-    plotter.assign("v", column=0, row=0, position=(0, 1),
+    plotter.assign("v", row=0, column=0, position=(0, 1),
                    x_sequence=times, label="v")
-    plotter.assign("delta", column=0, row=0, position=(1, 1),
+    plotter.assign("delta", row=0, column=0, position=(1, 1),
                    x_sequence=times, label="delta")
-    plotter.assign("outer_solver_iteration", column=0, row=0, position=(2, 1),
+    plotter.assign("outer_solver_iteration", row=0, column=0, position=(2, 1),
                    x_sequence=times, label="outer_solver_iteration")
-    plotter.assign("inner_solver_iteration", column=0, row=0, position=(2, 1),
+    plotter.assign("inner_solver_iteration", row=0, column=0, position=(2, 1),
                    x_sequence=times, label="inner_solver_iteration")
 
     plotter.plot()
