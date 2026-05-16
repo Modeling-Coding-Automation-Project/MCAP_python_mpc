@@ -50,8 +50,8 @@ class NonlinearMPC_TwiceDifferentiable:
         U (sp.Matrix): Symbolic input vector.
         X_initial (np.ndarray): Initial state estimate.
         fxu (sp.Matrix): Symbolic state transition function f(x, u).
-        hx (sp.Matrix): Symbolic measurement function h(x).
-        parameters_struct: Additional parameters required for the state and measurement functions.
+        hx (sp.Matrix): Symbolic measurement equation h(x).
+        parameters_struct: Additional parameters required for the state and measurement equations.
         Np (int): Prediction horizon length.
         Weight_U (np.ndarray, optional): Weighting matrix for input in the cost function. Defaults to zero matrix.
         Weight_X (np.ndarray, optional): Weighting matrix for state in the cost function. Defaults to zero matrix.
@@ -378,7 +378,7 @@ class NonlinearMPC_TwiceDifferentiable:
             Y_measured = Y
 
             X = self.kalman_filter.get_x_hat_without_delay()
-            Y = self.kalman_filter.measurement_function(
+            Y = self.kalman_filter.measurement_equation(
                 X, self.kalman_filter.Parameters)
 
             self.Y_store.push(Y)
