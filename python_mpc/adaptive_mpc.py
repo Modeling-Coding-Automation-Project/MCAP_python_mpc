@@ -206,7 +206,7 @@ class AdaptiveMPC_NoConstraints:
         Generates Python function files from symbolic Jacobian matrices
           and returns references to the generated functions and their file names.
 
-        This method takes symbolic Jacobians of the system dynamics and measurement functions, generates corresponding Python code files,
+        This method takes symbolic Jacobians of the system dynamics and measurement equations, generates corresponding Python code files,
         imports the generated functions,
           and returns them along with their file names and the weighted measurement Jacobian.
 
@@ -215,11 +215,11 @@ class AdaptiveMPC_NoConstraints:
               with respect to state variables.
             fxu_jacobian_U (sp.Matrix): Symbolic Jacobian of the system dynamics
               with respect to input variables.
-            hx_jacobian (sp.Matrix): Symbolic Jacobian of the measurement function
+            hx_jacobian (sp.Matrix): Symbolic Jacobian of the measurement equation
               with respect to state variables.
             X (sp.Matrix): Symbolic state variable vector.
             U (sp.Matrix): Symbolic input variable vector.
-            Weight_Y (np.ndarray): Weighting matrix for the measurement function.
+            Weight_Y (np.ndarray): Weighting matrix for the measurement equation.
             file_name_without_ext (str): Base name for the generated Python files (without extension).
 
         Returns:
@@ -235,15 +235,15 @@ class AdaptiveMPC_NoConstraints:
 
         file_name_without_ext_to_write = f"{file_name_without_ext}_adaptive_mpc"
 
-        fxu_jacobian_X_file_name = ExpressionDeploy.write_state_function_code_from_sympy(
+        fxu_jacobian_X_file_name = ExpressionDeploy.write_state_equation_code_from_sympy(
             fxu_jacobian_X, X, U, file_name_without_ext_to_write)
 
-        fxu_jacobian_U_file_name = ExpressionDeploy.write_state_function_code_from_sympy(
+        fxu_jacobian_U_file_name = ExpressionDeploy.write_state_equation_code_from_sympy(
             fxu_jacobian_U, X, U, file_name_without_ext_to_write)
 
         hx_jacobian = sp.Matrix(np.diag(Weight_Y)) * hx_jacobian
 
-        hx_jacobian_file_name = ExpressionDeploy.write_measurement_function_code_from_sympy(
+        hx_jacobian_file_name = ExpressionDeploy.write_measurement_equation_code_from_sympy(
             hx_jacobian, X, file_name_without_ext_to_write)
 
         local_vars = {}
@@ -554,7 +554,7 @@ class AdaptiveMPC_NoConstraints:
             Y_measured = Y
 
             X = self.kalman_filter.get_x_hat_without_delay()
-            Y = self.kalman_filter.measurement_function(
+            Y = self.kalman_filter.measurement_equation(
                 X, self.kalman_filter.Parameters)
 
             self.Y_store.push(Y)
