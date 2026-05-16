@@ -150,21 +150,21 @@ def main():
         plotter.append_name(inner_solver_iteration, "inner_solver_iteration")
 
     # plot
-    plotter.assign("y_measured", column=0, row=0, position=(0, 0),
+    plotter.assign("y_measured", row=0, column=0, position=(0, 0),
                    x_sequence=time, label="theta")
-    plotter.assign("reference", column=0, row=0, position=(0, 0),
+    plotter.assign("reference", row=0, column=0, position=(0, 0),
                    x_sequence=time, label="theta_reference")
 
-    plotter.assign("x_true", column=0, row=0, position=(1, 0),
+    plotter.assign("x_true", row=0, column=0, position=(1, 0),
                    x_sequence=time, label="x_0")
-    plotter.assign("x_true", column=1, row=0, position=(2, 0),
+    plotter.assign("x_true", row=1, column=0, position=(2, 0),
                    x_sequence=time, label="x_1")
 
-    plotter.assign("u", column=0, row=0, position=(0, 1),
+    plotter.assign("u", row=0, column=0, position=(0, 1),
                    x_sequence=time, label="u")
-    plotter.assign("outer_solver_iteration", column=0, row=0, position=(1, 1),
+    plotter.assign("outer_solver_iteration", row=0, column=0, position=(1, 1),
                    x_sequence=time, label="outer_solver_iteration")
-    plotter.assign("inner_solver_iteration", column=0, row=0, position=(1, 1),
+    plotter.assign("inner_solver_iteration", row=0, column=0, position=(1, 1),
                    x_sequence=time, label="inner_solver_iteration")
 
     plotter.plot()
