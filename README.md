@@ -7,6 +7,16 @@
 
 https://github.com/Modeling-Coding-Automation-Project/python_mpc_to_cpp
 
+## ドキュメント
+
+MPCやシミュレーションの使い方を、`sample/` フォルダのコードに合わせて整理したガイドを用意しています。
+
+- [document/README.md](./document/README.md)
+- [document/01-overview.md](./document/01-overview.md)
+- [document/02-linear-mpc-usage.md](./document/02-linear-mpc-usage.md)
+- [document/03-nonlinear-mpc-usage.md](./document/03-nonlinear-mpc-usage.md)
+- [document/04-simulation-and-signal-usage.md](./document/04-simulation-and-signal-usage.md)
+
 ## サポート
 
 新規にissueを作成して、詳細をお知らせください。
