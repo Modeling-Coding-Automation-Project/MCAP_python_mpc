@@ -17,11 +17,6 @@ MPCやシミュレーションの使い方を、`sample/` フォルダのコー�
 - [document/03-nonlinear-mpc-usage.md](./document/03-nonlinear-mpc-usage.md)
 - [document/04-simulation-and-signal-usage.md](./document/04-simulation-and-signal-usage.md)
 
-必要に応じて、外部ライブラリの利用ガイドも確認できます。
-
-- [external_libraries/MCAP_python_control/document/README.md](./external_libraries/MCAP_python_control/document/README.md)
-- [external_libraries/MCAP_python_optimization/document/README.md](./external_libraries/MCAP_python_optimization/document/README.md)
-
 ## サポート
 
 新規にissueを作成して、詳細をお知らせください。
