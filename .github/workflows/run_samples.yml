@@ -51,6 +51,10 @@ jobs:
 
         /opt/venv_py_mpc/bin/python3 ./sample/lti/servo_motor_constraints.py
 
+        /opt/venv_py_mpc/bin/python3 ./sample/lti/instant_mpc_simple_demo.py
+
+        /opt/venv_py_mpc/bin/python3 ./sample/lti/servo_motor_constraints_instant_MPC.py
+
         /opt/venv_py_mpc/bin/python3 ./sample/ltv_no_constraints/servo_motor.py
 
         /opt/venv_py_mpc/bin/python3 ./sample/ltv/servo_motor_constraints.py
